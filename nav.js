@@ -19,11 +19,8 @@ var M={'market-universe/machine.html':['Universe','',['market-universe/hub/']],
 'correlation-lab/':['Geopolitics','',['correlation-lab/regimes.html','correlation-lab/leaders.html']],
 'correlation-lab/index.html':['Geopolitics','',['correlation-lab/regimes.html','correlation-lab/leaders.html']],
 'correlation-lab/regimes.html':['Geopolitics','',['correlation-lab/','correlation-lab/leaders.html']],
-'correlation-lab/leaders.html':['Stocks','',['correlation-lab/','correlation-lab/regimes.html']],
-'investor-tier-map/':['My trades','Private raise',['investor-tier-map/lightning.html']],
-'investor-tier-map/index.html':['My trades','Private raise',['investor-tier-map/lightning.html']],
-'investor-tier-map/lightning.html':['My trades','Private raise',['investor-tier-map/']]};
-var N={'picks-playbook/':'Playbook','picks-playbook/roster.html':'Roster','picks-playbook/ranges.html':'Ranges','picks-playbook/coiled.html':'Coiled','picks-playbook/briefing.html':'Briefing','picks-playbook/glossary.html':'Glossary','setup-cards/':'Setup cards','setup-cards/cycles.html':'Cycles','setup-cards/clocks.html':'Clocks','setup-cards/crashes.html':'Crashes','chart-caller/':'Chart Caller','correlation-lab/':'Correlation Lab','correlation-lab/regimes.html':'Regimes','correlation-lab/leaders.html':'Leaders','investor-tier-map/':'Tier map','investor-tier-map/lightning.html':'Lightning','market-universe/machine.html':'Market Monitor'};
+'correlation-lab/leaders.html':['Stocks','',['correlation-lab/','correlation-lab/regimes.html']]};
+var N={'picks-playbook/':'Playbook','picks-playbook/roster.html':'Roster','picks-playbook/ranges.html':'Ranges','picks-playbook/coiled.html':'Coiled','picks-playbook/briefing.html':'Briefing','picks-playbook/glossary.html':'Glossary','setup-cards/':'Setup cards','setup-cards/cycles.html':'Cycles','setup-cards/clocks.html':'Clocks','setup-cards/crashes.html':'Crashes','chart-caller/':'Chart Caller','correlation-lab/':'Correlation Lab','correlation-lab/regimes.html':'Regimes','correlation-lab/leaders.html':'Leaders','market-universe/machine.html':'Market Monitor'};
 var p=location.pathname.replace(/^\//,'');var m=M[p]||M[p.replace(/[^/]*$/,'')];if(!m&&p.indexOf('market-universe/hub')===0)m=M['market-universe/hub/'];
 var e=function(s){return encodeURIComponent(s)};var bar=document.createElement('div');bar.id='mu-nav';
 bar.style.cssText='position:sticky;top:0;z-index:99999;background:#0b0f17;border-bottom:1px solid #f0b90b;color:#e8ecf3;font:13px system-ui;padding:6px 10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center';
