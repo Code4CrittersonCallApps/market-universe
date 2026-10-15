@@ -1,0 +1,39 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chart</title>
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<style>body{margin:0;background:#0b0f17;color:#e8ecf3;font:13px system-ui}main{max-width:1400px;margin:auto;padding:12px}a{color:#7fd1ff}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:12px}@media(max-width:900px){.wrap{grid-template-columns:1fr}}
+.card{background:#121927;border:1px solid #263248;border-radius:8px;padding:10px;margin-bottom:10px}.card h3{margin:0 0 6px;font-size:11px;color:#9fb0cc;text-transform:uppercase}
+table{width:100%;border-collapse:collapse}td{padding:3px 4px;border-bottom:1px solid #1d2638}.n{text-align:right;font-variant-numeric:tabular-nums}.g{color:#4cd17a}.r{color:#ff6b6b}
+.t{font-size:10px;padding:1px 5px;border-radius:5px;margin-right:2px;background:#263248}.nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}</style></head>
+<body><main><div class="nav"><a href="./">← Chart book</a><span><a id="prev">◀ Prev</a> &nbsp; <a id="next">Next ▶</a></span></div>
+<h1 id="ti" style="margin:4px 0"></h1><div id="sub"></div><div class="wrap"><div><div id="ch" style="height:520px"></div><div id="vol" style="height:110px"></div><div id="legend" style="font-size:11px;color:#9fb0cc"></div></div><div id="notes"></div></div></main>
+<script>
+const s=new URLSearchParams(location.search).get('s');const fm=v=>v==null?'–':(+v).toPrecision(6);const pc=v=>v==null?'–':`<span class="${v>=0?'g':'r'}">${v>0?'+':''}${v}%</span>`;
+const L=JSON.parse(sessionStorage.getItem('cbook')||'null');
+function pn(list){const i=list.indexOf(s);const p=list[(i-1+list.length)%list.length],n=list[(i+1)%list.length];document.getElementById('prev').href='chart.html?s='+encodeURIComponent(p);document.getElementById('next').href='chart.html?s='+encodeURIComponent(n);document.getElementById('prev').textContent='◀ '+p;document.getElementById('next').textContent=n+' ▶'}
+if(L&&L.includes(s))pn(L);else fetch('index.json').then(r=>r.json()).then(d=>pn(d.map(x=>x.s)));
+document.addEventListener('keydown',e=>{if(e.key=='ArrowLeft')location=document.getElementById('prev').href;if(e.key=='ArrowRight')location=document.getElementById('next').href});
+Promise.all([fetch('data/'+encodeURIComponent(s.replace('/','_'))+'.json').then(r=>r.json()),fetch('calls_scored.json').then(r=>r.json()).catch(()=>({calls:[]}))]).then(([d,cl])=>{
+ const m=d.meta,n=d.notes;document.title=m.s+' chart';document.getElementById('ti').innerHTML=`${m.s} <small style="font-weight:400;color:#9fb0cc">${m.name}</small>`;
+ document.getElementById('sub').innerHTML=m.p.map(x=>`<span class="t">${x}</span>`).join('')+` <small>${m.grp} · data: ${m.src} · as of ${n.asof}</small>`;
+ const ch=LightweightCharts.createChart(document.getElementById('ch'),{layout:{background:{color:'#0b0f17'},textColor:'#cfd6e4'},grid:{vertLines:{color:'#151c2a'},horzLines:{color:'#151c2a'}},rightPriceScale:{mode:1},timeScale:{borderColor:'#263248'}});
+ const cs=ch.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',wickUpColor:'#26a69a',wickDownColor:'#ef5350',borderVisible:false,priceFormat:{type:'price',precision:n.px<1?6:2,minMove:n.px<1?0.000001:0.01}});
+ cs.setData(d.candles.map(c=>({time:c[0],open:c[1],high:c[2],low:c[3],close:c[4]})));
+ const ln=(arr,col)=>{const l=ch.addLineSeries({color:col,lineWidth:2,priceLineVisible:false,lastValueVisible:false});l.setData(arr.map((v,i)=>({time:d.candles[i][0],value:v})))};ln(d.e21,'#f0b90b');ln(d.e55,'#7fd1ff');
+ const pl=(p,t,c,st=2)=>cs.createPriceLine({price:p,color:c,lineWidth:1,lineStyle:st,axisLabelVisible:true,title:t});
+ pl(n.hi52,'52w high','#9fb0cc',0);pl(n.lo52,'52w low','#9fb0cc',0);Object.entries(n.fib).forEach(([k,v])=>pl(v,'fib '+k,k=='0.702'?'#ff9f43':'#a29bfe'));
+ if(n.call){pl(n.call.target,'target','#4cd17a',0);pl(n.call.stop,'invalidation','#ff6b6b',0)}else pl(n.inval,'invalidation','#ff6b6b',0);
+ ch.timeScale().fitContent();
+ const vc=LightweightCharts.createChart(document.getElementById('vol'),{layout:{background:{color:'#0b0f17'},textColor:'#cfd6e4'},grid:{vertLines:{visible:false},horzLines:{visible:false}},timeScale:{visible:false}});
+ const vs=vc.addHistogramSeries({color:'#3d4a63',priceFormat:{type:'volume'}});vs.setData(d.candles.map(c=>({time:c[0],value:c[5],color:c[4]>=c[1]?'#1f6f66':'#7a2f2f'})));vc.timeScale().fitContent();
+ ch.timeScale().subscribeVisibleLogicalRangeChange(r=>{if(r)vc.timeScale().setVisibleLogicalRange(r)});
+ document.getElementById('legend').innerHTML='Daily candles (log scale) · <span style="color:#f0b90b">EMA21</span> · <span style="color:#7fd1ff">EMA55</span> · fib levels: '+n.fdesc+' (.702 in orange) · volume (USD for crypto) · ← → keys for prev/next';
+ const inf=cl.calls.filter(c=>c.asset==m.s&&c.source!='data');const mine=cl.calls.filter(c=>c.asset==m.s&&c.source=='data');
+ const row=(a,b)=>`<tr><td>${a}</td><td class="n">${b}</td></tr>`;
+ document.getElementById('notes').innerHTML=`<div class="card"><h3>State</h3><b>${n.st}</b> (${n.ext>0?'+':''}${n.ext}% vs EMA21)<table>${row('Price',fm(n.px))+row('MTD',pc(n.mtd))+row('30d',pc(n.d30))+row('3M',pc(n.m3))+row('YTD',pc(n.ytd))+row('From 52w low',pc(n.low52))+row('From 52w high',pc(n.hi52d))+row('From ATH',n.athd==null?'– <small>(not available)</small>':pc(n.athd)+` <small>${fm(n.ath)} ${n.ath_date}</small>`)+row('Invalidation',fm(n.call?n.call.stop:n.inval))}</table></div>
+ <div class="card"><h3>Setup</h3>${n.call?`<b>${n.call.setup}</b> · ${n.call.dir}<br>Entry ${fm(n.call.entry_lo)}–${fm(n.call.entry_hi)} · target ${fm(n.call.target)} · invalidation ${fm(n.call.stop)} · horizon ${n.call.horizon}<br><small>Logged to the <a href="calls.html">call ledger</a>.</small>`:(n.setups.length?n.setups.join(', '):'No named setup active.')}</div>
+ <div class="card"><h3>Macro fit</h3><b>${n.fit}</b>. ${n.fitwhy}</div><div class="card"><h3>What to learn here</h3>${n.learn}</div>
+ <div class="card"><h3>Influencers & gut calls</h3>${inf.length?inf.map(c=>`<div style="margin-bottom:6px"><b>${c.who}</b> ${c.date} · ${c.dir}${c.target?' → '+fm(c.target):''}${c.stop?' · stop '+fm(c.stop):''}<br><small>"${c.quote}" ${c.url?`<a href="${c.url}" target="_blank">post</a>`:''} · ${c.score.status} ${c.score.ret!=null?(c.score.ret>0?'+':'')+c.score.ret+'%':''}</small></div>`).join(''):'<small>No linked public calls with a level on this asset found (BCB, Krown, Cam Fous, Raoul Pal; X, last 60 days).</small>'}</div>
+ ${mine.length?`<div class="card"><h3>Terminal call history</h3>${mine.map(c=>`${c.date} ${c.dir} ${c.setup}: ${c.score.status} ${c.score.ret>0?'+':''}${c.score.ret}%`).join('<br>')}</div>`:''}`;
+}).catch(e=>{document.getElementById('ti').textContent=s+': no chart data'});
+</script><script src="../nav.js" defer></script></body></html>
