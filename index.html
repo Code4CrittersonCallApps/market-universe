@@ -12,11 +12,11 @@ const CRY=n=>{let p=n;while(p){if(p.n==='Crypto')return 1;p=p.up}return 0};
 function link(t){(function w(n,up){n.up=up;(n.kids||[]).forEach(k=>w(k,n))})(TREE,null)}link();
 function find(path){let n=TREE;for(const p of path){n=(n.kids||[]).find(k=>k.n===p);if(!n)return null}return n}
 function buy(n,cr){if(n.fund)return'<span class="tag sch">Schwab IRA</span>';if(IDX.has(n.n))return'<span class="tag">index/data, not buyable</span>';
- if(cr&&!/^(MSTR|COIN|HOOD|MARA|RIOT|CLSK|HUT|IREN|CORZ|WULF|CIFR)$/.test(n.n))return'<span class="tag uph">Uphold (verify listing)</span>';return'<span class="tag sch">Schwab IRA</span>'}
+ if((cr||/^(BTC|ETH|SOL|XRP|AVAX|DOT|ADA)$/.test(n.n))&&!/^(MSTR|COIN|HOOD|MARA|RIOT|CLSK|HUT|IREN|CORZ|WULF|CIFR)$/.test(n.n))return'<span class="tag uph">Uphold (verify listing)</span>';return'<span class="tag sch">Schwab IRA</span>'}
 const enc=p=>'#/'+p.map(encodeURIComponent).join('/');
 function render(){const path=location.hash.replace(/^#\/?/,'').split('/').filter(Boolean).map(decodeURIComponent);const n=find(path)||TREE;
  const cr=['<a href="#/">Universe</a>'];path.forEach((p,i)=>cr.push('<a href="'+enc(path.slice(0,i+1))+'">'+p+'</a>'));document.getElementById('cr').innerHTML=cr.join(' › ');
- const level=['Universe','Galaxy','Solar system','Asset','Asset'][path.length];document.getElementById('ti').textContent=n.n+' · '+level+(n.status?' ':'');
+ const level=['Universe','Galaxy','Solar system','Asset','Asset'][path.length];document.getElementById('ti').textContent=path.length?n.n+' · '+level:'🌌 Market Universe';
  let h='';if(n.status)h+='<span class="tag '+n.status+'">'+(n.status==='live'?'dashboards live':'building (stub: live free-data gauges)')+'</span>';
  if(n.note)h+='<p>'+n.note+'</p>';const c=CRY(n);
  if(n.flag&&n.flag.length)h+='<h3>Flagships</h3>'+n.flag.map(f=>'<span class="tag flag">'+f+'</span> '+buy({n:f},c&&!/^(IBIT|ETHA|BSOL|XRPZ|BAVA|TDOT)$/.test(f)).replace('tag','tag').replace('</span>','</span>')).join(' ');
