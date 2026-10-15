@@ -20,7 +20,7 @@ Promise.all([fetch('data/'+encodeURIComponent(s.replace('/','_'))+'.json').then(
  const cs=ch.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',wickUpColor:'#26a69a',wickDownColor:'#ef5350',borderVisible:false,priceFormat:{type:'price',precision:n.px<1?6:2,minMove:n.px<1?0.000001:0.01}});
  cs.setData(d.candles.map(c=>({time:c[0],open:c[1],high:c[2],low:c[3],close:c[4]})));
  const ln=(arr,col)=>{const l=ch.addLineSeries({color:col,lineWidth:2,priceLineVisible:false,lastValueVisible:false});l.setData(arr.map((v,i)=>({time:d.candles[i][0],value:v})))};ln(d.e21,'#f0b90b');ln(d.e55,'#7fd1ff');
- const mu=c=>c.startsWith('#')&&c.length==7?c+'99':c;const pl=(p,t,c,st=2)=>cs.createPriceLine({price:p,color:mu(c),lineWidth:1,lineStyle:st,axisLabelVisible:true,title:t});
+ const mu=c=>c.startsWith('#')&&c.length==7?c+'99':c;const LBL=[];const pl=(p,t,c,st=2)=>{if(p==null||!isFinite(p))return;LBL.push([p,t,c]);cs.createPriceLine({price:p,color:mu(c),lineWidth:1,lineStyle:st,axisLabelVisible:false,title:''})};
  pl(n.hi52,'52w high','#9fb0cc',0);pl(n.lo52,'52w low','#9fb0cc',0);Object.entries(n.fib).forEach(([k,v])=>pl(v,'fib '+k,k=='0.702'?'#ff9f43':'#a29bfe'));
  if(n.call){pl(n.call.target,'target','#4cd17a',0);pl(n.call.stop,'invalidation','#ff6b6b',0)}else pl(n.inval,'invalidation','#ff6b6b',0);
  const x=d.x||null;
@@ -33,6 +33,11 @@ Promise.all([fetch('data/'+encodeURIComponent(s.replace('/','_'))+'.json').then(
   (x.wy&&x.wy.events||[]).forEach(e=>{if(ts(e[1])>=t0)mk.push({time:ts(e[1]),position:['AR','BC','UTAD','SOS'].includes(e[0])?'aboveBar':'belowBar',color:'#e8c46b',shape:'circle',text:e[0],size:.6})});
   mk.sort((a,b)=>a.time<b.time?-1:1);cs.setMarkers(mk)}
  ch.timeScale().fitContent();
+ const box=document.getElementById('ch');box.style.position='relative';const tg=document.createElement('div');tg.style.cssText='position:absolute;inset:0;pointer-events:none;z-index:3';box.appendChild(tg);
+ const drawTags=()=>{const H=box.clientHeight-28,G=12,sw=ch.priceScale('right').width();let a=LBL.map(([p,t,c])=>({p,t,c,y:cs.priceToCoordinate(p)})).filter(o=>o.y!=null&&o.y>=0&&o.y<=H).sort((x,y)=>x.y-y.y);
+  for(let i=1;i<a.length;i++)if(a[i].y<a[i-1].y+G)a[i].y=a[i-1].y+G;const ov=a.length?a[a.length-1].y-H:0;if(ov>0){a.forEach(o=>o.y-=ov);for(let i=a.length-2;i>=0;i--)if(a[i].y>a[i+1].y-G)a[i].y=a[i+1].y-G}
+  tg.innerHTML=a.map(o=>`<div style="position:absolute;right:${sw+2}px;top:${o.y-6}px;font-size:9px;line-height:11px;padding:0 3px;border-radius:3px;background:rgba(11,15,23,.75);color:${o.c.startsWith('#')?o.c:'#a0a0c8'};opacity:.8;white-space:nowrap">${o.t} ${fm(o.p)}</div>`).join('')};
+ ch.timeScale().subscribeVisibleLogicalRangeChange(()=>requestAnimationFrame(drawTags));new ResizeObserver(()=>requestAnimationFrame(drawTags)).observe(box);setTimeout(drawTags,50);
  const vc=LightweightCharts.createChart(document.getElementById('vol'),{layout:{background:{color:'#0b0f17'},textColor:'#cfd6e4'},grid:{vertLines:{visible:false},horzLines:{visible:false}},timeScale:{visible:false}});
  const vs=vc.addHistogramSeries({color:'#3d4a63',priceFormat:{type:'volume'}});vs.setData(d.candles.map(c=>({time:c[0],value:c[5],color:c[4]>=c[1]?'#1f6f66':'#7a2f2f'})));vc.timeScale().fitContent();
  ch.timeScale().subscribeVisibleLogicalRangeChange(r=>{if(r)vc.timeScale().setVisibleLogicalRange(r)});
