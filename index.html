@@ -1,28 +1,39 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Market Universe</title>
-<style>body{margin:0;background:#0b0f17;color:#e8ecf3;font:15px system-ui}main{max-width:1000px;margin:auto;padding:14px}
-.crumb a{color:#f0b90b;text-decoration:none}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
-.card{background:#151c2a;border:1px solid #263248;border-radius:12px;padding:12px;cursor:pointer}.card:hover{border-color:#f0b90b}
-.card b{font-size:17px}.tag{display:inline-block;font-size:11px;padding:2px 6px;border-radius:8px;margin:2px;background:#263248}
-.live{background:#1d5a33}.building{background:#6b4b10}.sch{background:#1b3f73}.uph{background:#4a2a6b}.flag{background:#2c3a52;cursor:pointer}
-h1{margin:6px 0}h3{margin:16px 0 6px;color:#9fb0cc;font-size:13px;text-transform:uppercase}a.d{display:block;color:#7fd1ff;margin:4px 0}</style></head>
-<body><main><div class="crumb" id="cr"></div><h1 id="ti"></h1><div id="bd"></div></main>
-<script src="tree.js"></script><script>
-const IDX=new Set(['SPX','NASDAQ','RUT','DJI','TNX','US10Y','US02Y','2s10s','HY OAS','IG OAS','Case-Shiller','30Y mortgage','Housing starts','GOLD_FUT','SILVER_FUT','OIL_FUT','OIL','COPPER','EURUSD','USDJPY','USDCNY','DXY','VIX','MOVE','GPR index','WALCL','RRP','TGA','US M2','Global M2','Fed funds']);
-const CRY=n=>{let p=n;while(p){if(p.n==='Crypto')return 1;p=p.up}return 0};
-function link(t){(function w(n,up){n.up=up;(n.kids||[]).forEach(k=>w(k,n))})(TREE,null)}link();
-function find(path){let n=TREE;for(const p of path){n=(n.kids||[]).find(k=>k.n===p);if(!n)return null}return n}
-function buy(n,cr){if(n.fund)return'<span class="tag sch">Schwab IRA</span>';if(IDX.has(n.n))return'<span class="tag">index/data, not buyable</span>';
- if((cr||/^(BTC|ETH|SOL|XRP|AVAX|DOT|ADA)$/.test(n.n))&&!/^(MSTR|COIN|HOOD|MARA|RIOT|CLSK|HUT|IREN|CORZ|WULF|CIFR)$/.test(n.n))return'<span class="tag uph">Uphold (verify listing)</span>';return'<span class="tag sch">Schwab IRA</span>'}
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Global Market Map</title>
+<style>body{margin:0;background:#0b0f17;color:#e8ecf3;font:14px system-ui}main{max-width:1150px;margin:auto;padding:14px}a{color:#7fd1ff}
+.crumb a{color:#f0b90b;text-decoration:none}table{width:100%;border-collapse:collapse}td,th{border-bottom:1px solid #263248;padding:7px;text-align:left;vertical-align:top}th{color:#9fb0cc;font-size:12px}
+tr.c{cursor:pointer}tr.c:hover{background:#151c2a}.n{text-align:right;font-variant-numeric:tabular-nums}.bar{height:10px;background:#f0b90b;border-radius:3px}
+.b{padding:2px 7px;border-radius:8px;font-weight:700;font-size:11px}.t{display:inline-block;font-size:11px;padding:2px 6px;border-radius:6px;margin:1px;background:#263248}
+.card{background:#121927;border:1px solid #263248;border-radius:10px;padding:10px;margin:8px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px}h3{color:#9fb0cc;font-size:12px;text-transform:uppercase;margin:14px 0 6px}</style></head>
+<body><main><div class="crumb" id="cr"></div><h1 id="ti"></h1><div id="bd"></div></main><script src="tree.js"></script><script>
+const COL={LEFT:'#c0392b',BOARDING:'#1d8a4a',WARMING:'#b07d10',BENCHED:'#55606e'},LBL={LEFT:'UPTREND · EXTENDED',BOARDING:'UPTREND · PULLBACK',WARMING:'TRANSITION',BENCHED:'DOWNTREND'};
+const st=t=>t?`<span class="b" style="background:${COL[t.st]}">${LBL[t.st]}</span>`:'';const pc=v=>v==null?'':`<span style="color:${v>=0?'#4cd17a':'#ff6b6b'}">${v>0?'+':''}${v}%</span>`;
+(function w(n,u){n.up=u;(n.kids||[]).forEach(k=>w(k,n))})(TREE,null);
+const LV=['Global','Market','Segment','Instrument','Constituent / fund','Fund'];
+const cc=v=>v==null?'–':`<span style="color:${v>=0.3?'#4cd17a':v<=-0.3?'#ff6b6b':'#cfd6e4'}">${v.toFixed(2)}</span>`;
+function corCard(n){const o=n.cor;if(!o)return '';let h='<div class="card"><h3>Correlation line-of-sight (daily returns, Yahoo / Treasury / NY Fed)</h3>';
+ if(o.par)h+=`<b>vs parent ${o.par[0]}</b>: 1M ${cc(o.par[1])} · 3M ${cc(o.par[2])} · 1Y ${cc(o.par[3])}`+(o.ll?` · lead/lag: ${o.ll[1]>0?n.n+' <b>leads</b> by '+o.ll[1]+'d':n.n+' <b>lags</b> by '+(-o.ll[1])+'d'} (r=${o.ll[0]})`:' · no significant lead/lag')+'<br>';
+ h+='<b>vs the 9 markets (1Y)</b>: '+Object.entries(o.mk).map(([m,v])=>m+' '+cc(v)).join(' · ')+'<br>';
+ if(o.sib&&o.sib.length)h+='<b>Siblings</b>: most correlated '+o.sib.slice(0,3).map(x=>x[0]+' '+cc(x[1])).join(', ')+(o.sib.length>3?' · least / inverse '+o.sib[3][0]+' '+cc(o.sib[3][1]):'');
+ return h+'<br><small>Correlated ≥0.30 green, inverse ≤−0.30 red. Lead/lag = best cross-correlation of daily returns at 1–5 day lags, shown only if above the 2/√n significance threshold.</small></div>'}
+function find(p){let n=TREE;for(const x of p){n=(n.kids||[]).find(k=>k.n===x);if(!n)return null}return n}
 const enc=p=>'#/'+p.map(encodeURIComponent).join('/');
+function buy(k){if(k.fund)return'<span class="t">Schwab IRA</span>';if(k.buy)return k.buy.map(b=>'<span class="t">'+b+'</span>').join('');if(k.coin)return'';
+ if(/^(US10Y|2s10s|HY OAS|DXY|RRP|TGA|Case-Shiller|30Y mortgage|MOVE|GPR index|\^)/.test(k.n)||k.link)return'';return k.tr||/^[A-Z]{1,5}$/.test(k.n)?'<span class="t">Schwab IRA</span><span class="t">Robinhood</span>':''}
 function render(){const path=location.hash.replace(/^#\/?/,'').split('/').filter(Boolean).map(decodeURIComponent);const n=find(path)||TREE;
- const cr=['<a href="#/">Universe</a>'];path.forEach((p,i)=>cr.push('<a href="'+enc(path.slice(0,i+1))+'">'+p+'</a>'));document.getElementById('cr').innerHTML=cr.join(' › ');
- const level=['Universe','Galaxy','Solar system','Asset','Asset'][path.length];document.getElementById('ti').textContent=path.length?n.n+' · '+level:'🌌 Market Universe';
- let h='';if(n.status)h+='<span class="tag '+n.status+'">'+(n.status==='live'?'dashboards live':'building (stub: live free-data gauges)')+'</span>';
- if(n.note)h+='<p>'+n.note+'</p>';const c=CRY(n);
- if(n.flag&&n.flag.length)h+='<h3>Flagships</h3>'+n.flag.map(f=>'<span class="tag flag">'+f+'</span> '+buy({n:f},c&&!/^(IBIT|ETHA|BSOL|XRPZ|BAVA|TDOT)$/.test(f)).replace('tag','tag').replace('</span>','</span>')).join(' ');
- if(n.dash&&n.dash.length)h+='<h3>Dashboards</h3>'+n.dash.map(d=>'<a class="d" href="'+d.u+'">▶ '+d.t+'</a>').join('');
- if(n.gauges)h+='<h3>Live gauges (free data)</h3>'+n.gauges.map(d=>'<a class="d" target="_blank" href="'+d.u+'">◎ '+d.t+'</a>').join('');
- if(n.kids&&n.kids.length){h+='<h3>'+(path.length?'Inside':'Galaxies ('+n.kids.length+')')+'</h3><div class="grid">'+n.kids.map(k=>'<div class="card" onclick="location.hash=\''+enc(path.concat(k.n)).replace(/'/g,"\\'")+'\'"><b>'+k.n+'</b><br>'+(k.status?'<span class="tag '+k.status+'">'+k.status+'</span>':'')+(k.kids&&k.kids.length?'<span class="tag">'+k.kids.length+' inside</span>':buy(k,c))+(k.note?'<br><small>'+k.note+'</small>':'')+'</div>').join('')+'</div>'}
- else if(!n.status){h+='<h3>Open</h3><a class="d" target="_blank" href="https://www.tradingview.com/search/?query='+encodeURIComponent(n.n.replace(/ \(.*\)/,''))+'">TradingView: '+n.n+'</a>'+buy(n,c)}
+ document.getElementById('cr').innerHTML=['<a href="#/">Global market</a>'].concat(path.map((p,i)=>'<a href="'+enc(path.slice(0,i+1))+'">'+p+'</a>')).join(' › ');
+ document.getElementById('ti').textContent=path.length?n.n+' · '+LV[path.length]:'Global Market Map';let h='';
+ if(!path.length){h+=`<p>Top-down map of global capital, sized by market value. Start with the <a href="machine.html"><b>Global Market Monitor</b></a> (performance rankings, rotation regime, trend state), then drill: market → segment → instrument → constituent/fund. Every node shows correlation, inverse, lead/lag vs its parent, siblings and the 9 markets.</p><a href="machine.html"><img src="heatmap.png" style="width:100%;border-radius:8px"></a>`;
+  const mx=Math.max(...n.kids.filter(k=>k.size).map(k=>k.size));
+  h+='<h3>Asset classes</h3><table><tr><th>Market</th><th>Size (USD T)</th><th></th><th>Proxy</th><th>MTD</th><th>30d</th><th>Trend</th><th>Off ATH</th></tr>'+n.kids.map(k=>`<tr class="c" onclick="location.hash='${enc([k.n]).replace(/'/g,"\\'")}'"><td><b>${k.n}</b>${k.corner?' <span class="t">personal</span>':''}</td><td class="n">${k.size?k.size.toFixed(1):'n/a'}</td><td style="width:22%">${k.size?`<div class="bar" style="width:${Math.max(1,k.size/mx*100)}%"></div>`:''}</td><td>${k.proxy||''}</td><td class="n">${k.tr?pc(k.tr.mtd):''}</td><td class="n">${k.tr?pc(k.tr.d30):''}</td><td>${st(k.tr)}</td><td class="n">${k.where?pc(k.where.dd):''}</td></tr>`).join('')+'</table><p><small>Sizes: see each asset class for source and date. Crypto, gold and oil are computed live (CoinGecko, Yahoo, IEA volumes); others are latest published industry estimates. FX is daily turnover, not stock.</small></p>';
+  h+='<h3>Frameworks applied (from the thesis)</h3><div class="card">'+FW.map(f=>'<b>'+f[0]+':</b> '+f[1]).join('<br>')+'</div>';}
+ else{ if(n.what){h+=`<div class="grid"><div class="card"><h3>Overview</h3>${n.what}<br><br><b>Size:</b> ${n.size?'$'+n.size+'T':'n/a'} <small>(${n.src})</small></div>
+  <div class="card"><h3>Drivers</h3>${n.drivers}<br><b>Expands when:</b> ${n.fires}<br><b>Contracts when:</b> ${n.stalls}</div>
+  <div class="card"><h3>Current state (proxy ${n.proxy})</h3>${st(n.tr)} MTD ${n.tr?pc(n.tr.mtd):''} · 30d ${n.tr?pc(n.tr.d30):''}${n.where?`<br>History since ${n.where.since}: ${pc(n.where.dd)} from ATH, ${n.where.pct}th pct of range, 1y ${pc(n.where.r1y)}, vs 200d MA ${pc(n.where.vs200)}`:''}</div>
+  </div>`;
+  h+='<h3>Benchmarks</h3>'+n.flag.map(f=>'<span class="t">'+f+'</span>').join(' ');}
+  if(n.note)h+='<p>'+n.note+'</p>';h+=corCard(n);if(n.link)h+='<p><a href="'+n.link+'">Open dashboard</a></p>';
+  if(n.dash&&n.dash.length)h+='<h3>Dashboards</h3>'+n.dash.map(d=>'<a style="display:block" href="'+d.u+'">'+d.t+'</a>').join('');
+  if(n.kids&&n.kids.length)h+='<h3>'+LV[path.length+1]+'s</h3><table><tr><th>Name</th><th>Detail</th><th>MTD</th><th>30d</th><th>Trend</th><th>Access</th></tr>'+n.kids.map(k=>`<tr class="c" onclick="${k.link&&!k.kids?`location.href='${k.link}'`:`location.hash='${enc(path.concat(k.n)).replace(/'/g,"\\'")}'`}"><td><b>${k.n}</b>${k.kids?' <small>('+k.kids.length+')</small>':''}</td><td><small>${k.note||''}</small></td><td class="n">${k.tr?pc(k.tr.mtd):''}</td><td class="n">${k.tr?pc(k.tr.d30):''}</td><td>${st(k.tr)}</td><td>${buy(k)}</td></tr>`).join('')+'</table>';
+  else if(!n.link)h+=`<p><a target="_blank" href="https://www.tradingview.com/search/?query=${encodeURIComponent(n.n)}">Chart on TradingView</a> ${buy(n)}</p>`;}
  document.getElementById('bd').innerHTML=h;scrollTo(0,0)}
 onhashchange=render;render();</script><script src="nav.js" defer></script></body></html>
