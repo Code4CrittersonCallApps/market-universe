@@ -17,7 +17,7 @@ function corCard(n){const o=n.cor;if(!o)return '';let h='<div class="card"><h3>C
  return h+'<br><small>Correlated ≥0.30 green, inverse ≤−0.30 red. Lead/lag = best cross-correlation of daily returns at 1–5 day lags, shown only if above the 2/√n significance threshold.</small></div>'}
 function find(p){let n=TREE;for(const x of p){n=(n.kids||[]).find(k=>k.n===x);if(!n)return null}return n}
 const enc=p=>'#/'+p.map(encodeURIComponent).join('/');
-function buy(k){if(k.fund)return'<span class="t">Schwab IRA</span>';if(k.buy)return k.buy.map(b=>'<span class="t">'+b+'</span>').join('');if(k.coin)return'';
+function buy(k){if(k.kids&&!k.coin&&!k.tr)return'';if(k.fund)return'<span class="t">Schwab IRA</span>';if(k.buy)return k.buy.map(b=>'<span class="t">'+b+'</span>').join('');if(k.coin)return'';
  if(/^(US10Y|2s10s|HY OAS|DXY|RRP|TGA|Case-Shiller|30Y mortgage|MOVE|GPR index|\^)/.test(k.n)||k.link)return'';return k.tr||/^[A-Z]{1,5}$/.test(k.n)?'<span class="t">Schwab IRA</span><span class="t">Robinhood</span>':''}
 function render(){const path=location.hash.replace(/^#\/?/,'').split('/').filter(Boolean).map(decodeURIComponent);const n=find(path)||TREE;
  document.getElementById('cr').innerHTML=['<a href="#/">Global market</a>'].concat(path.map((p,i)=>'<a href="'+enc(path.slice(0,i+1))+'">'+p+'</a>')).join(' › ');
