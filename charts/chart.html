@@ -16,11 +16,11 @@ document.addEventListener('keydown',e=>{if(e.key=='ArrowLeft')location=document.
 Promise.all([fetch('data/'+encodeURIComponent(s.replace('/','_'))+'.json').then(r=>r.json()),fetch('calls_scored.json').then(r=>r.json()).catch(()=>({calls:[]}))]).then(([d,cl])=>{
  const m=d.meta,n=d.notes;document.title=m.s+' chart';document.getElementById('ti').innerHTML=`${m.s} <small style="font-weight:400;color:#9fb0cc">${m.name}</small>`;
  document.getElementById('sub').innerHTML=m.p.map(x=>`<span class="t">${x}</span>`).join('')+` <small>${m.grp} · data: ${m.src} · as of ${n.asof}</small>`;
- const ch=LightweightCharts.createChart(document.getElementById('ch'),{layout:{background:{color:'#0b0f17'},textColor:'#cfd6e4'},grid:{vertLines:{color:'#151c2a'},horzLines:{color:'#151c2a'}},rightPriceScale:{mode:1},timeScale:{borderColor:'#263248'}});
+ const ch=LightweightCharts.createChart(document.getElementById('ch'),{layout:{background:{color:'#0b0f17'},textColor:'#8b95a7',fontSize:10},grid:{vertLines:{color:'#151c2a'},horzLines:{color:'#151c2a'}},rightPriceScale:{mode:1,scaleMargins:{top:.08,bottom:.08}},timeScale:{borderColor:'#263248',rightOffset:14}});
  const cs=ch.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',wickUpColor:'#26a69a',wickDownColor:'#ef5350',borderVisible:false,priceFormat:{type:'price',precision:n.px<1?6:2,minMove:n.px<1?0.000001:0.01}});
  cs.setData(d.candles.map(c=>({time:c[0],open:c[1],high:c[2],low:c[3],close:c[4]})));
  const ln=(arr,col)=>{const l=ch.addLineSeries({color:col,lineWidth:2,priceLineVisible:false,lastValueVisible:false});l.setData(arr.map((v,i)=>({time:d.candles[i][0],value:v})))};ln(d.e21,'#f0b90b');ln(d.e55,'#7fd1ff');
- const pl=(p,t,c,st=2)=>cs.createPriceLine({price:p,color:c,lineWidth:1,lineStyle:st,axisLabelVisible:true,title:t});
+ const mu=c=>c.startsWith('#')&&c.length==7?c+'99':c;const pl=(p,t,c,st=2)=>cs.createPriceLine({price:p,color:mu(c),lineWidth:1,lineStyle:st,axisLabelVisible:true,title:t});
  pl(n.hi52,'52w high','#9fb0cc',0);pl(n.lo52,'52w low','#9fb0cc',0);Object.entries(n.fib).forEach(([k,v])=>pl(v,'fib '+k,k=='0.702'?'#ff9f43':'#a29bfe'));
  if(n.call){pl(n.call.target,'target','#4cd17a',0);pl(n.call.stop,'invalidation','#ff6b6b',0)}else pl(n.inval,'invalidation','#ff6b6b',0);
  const x=d.x||null;
@@ -29,8 +29,8 @@ Promise.all([fetch('data/'+encodeURIComponent(s.replace('/','_'))+'.json').then(
   (x.vp&&x.vp.bands||[]).forEach(b=>pl((b.lo+b.hi)/2,`vol band ${b.pct}%`,'rgba(160,160,200,.45)',1));
   if(x.der){(x.der.liq_short_above||[]).slice(0,2).forEach(z=>pl(z[0],'est. short liq','#26a69a',1));(x.der.liq_long_below||[]).slice(0,2).forEach(z=>pl(z[0],'est. long liq','#ef5350',1))}
   const t0=d.candles[0][0];const mk=[];
-  const ts=q=>Date.parse(q+'T00:00:00Z')/1000;(x.el&&x.el.pivots||[]).forEach(p=>{if(ts(p[0])>=t0)mk.push({time:ts(p[0]),position:p[2]=='H'?'aboveBar':'belowBar',color:'#c9a0ff',shape:p[2]=='H'?'arrowDown':'arrowUp',text:'swing '+p[2]})});
-  (x.wy&&x.wy.events||[]).forEach(e=>{if(ts(e[1])>=t0)mk.push({time:ts(e[1]),position:['AR','BC','UTAD','SOS'].includes(e[0])?'aboveBar':'belowBar',color:'#e8c46b',shape:'circle',text:e[0]})});
+  const ts=q=>Date.parse(q+'T00:00:00Z')/1000;(x.el&&x.el.pivots||[]).forEach(p=>{if(ts(p[0])>=t0)mk.push({time:ts(p[0]),position:p[2]=='H'?'aboveBar':'belowBar',color:'#c9a0ff',shape:p[2]=='H'?'arrowDown':'arrowUp',text:'swing '+p[2],size:.6})});
+  (x.wy&&x.wy.events||[]).forEach(e=>{if(ts(e[1])>=t0)mk.push({time:ts(e[1]),position:['AR','BC','UTAD','SOS'].includes(e[0])?'aboveBar':'belowBar',color:'#e8c46b',shape:'circle',text:e[0],size:.6})});
   mk.sort((a,b)=>a.time<b.time?-1:1);cs.setMarkers(mk)}
  ch.timeScale().fitContent();
  const vc=LightweightCharts.createChart(document.getElementById('vol'),{layout:{background:{color:'#0b0f17'},textColor:'#cfd6e4'},grid:{vertLines:{visible:false},horzLines:{visible:false}},timeScale:{visible:false}});
