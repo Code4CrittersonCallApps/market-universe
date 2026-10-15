@@ -1,0 +1,52 @@
+const M=window.MONEYFLOW,ts=d=>Date.parse(d+'T00:00:00Z')/1e3,NAMES={SPX:'S&P 500 (SPY)',NDX:'Nasdaq (QQQ)',GOLD:'Gold (GLD)',DXY:'Dollar (DXY)',TLT:'Rates/10y+ (TLT)',ETH:'Ethereum'};
+const COL={SPX:'#4c9fff',NDX:'#c6f',GOLD:'#f0b90b',DXY:'#3c3',TLT:'#ff7b39',ETH:'#9ad',BTC:'#fff',ALT:'#f66'};
+function flow(){const S=M.stats;$('flowSrc').textContent=`Source: ${M.source}. Data ${M.first_day} → ${M.last_day}. Built ${M.built} ET on the box.`;
+ $('corrT').innerHTML='<tr><th>BTC vs</th><th>30d now</th><th>90d now</th><th>Last 1y</th><th>All history</th><th>% of time 90d &gt; 0.5</th></tr>'+Object.keys(NAMES).map(k=>`<tr><td>${NAMES[k]}</td><td>${S[k].now30}</td><td>${S[k].now90}</td><td>${S[k].last1y}</td><td>${S[k].full} <small>since ${S[k].since.slice(0,4)}</small></td><td>${(S[k].pct_gt05_90*100).toFixed(0)}%</td></tr>`).join('')+
+ `<tr><td colspan=6><small>Gold 90d corr at BTC tops: ${Object.entries(S.at_tops_90d.GOLD).filter(x=>x[1]!=null).map(x=>x[0].slice(0,7)+' '+x[1]).join(', ')}. S&P at tops: ${Object.entries(S.at_tops_90d.SPX).filter(x=>x[1]!=null).map(x=>x[0].slice(0,7)+' '+x[1]).join(', ')}.</small></td></tr>`;
+ const N={LIQ:[300,30,'Global liquidity / macro'],SPX:[60,120,'S&P'],NDX:[170,120,'Nasdaq'],GOLD:[300,120,'Gold'],DXY:[420,120,'Dollar'],TLT:[530,120,'Rates'],BTC:[300,215,'Bitcoin'],ETH:[300,275,'Ethereum'],ALT:[300,325,'Alts']};
+ let g='';const L=(a,b,w,dash,lab)=>{g+=`<line x1="${N[a][0]}" y1="${N[a][1]}" x2="${N[b][0]}" y2="${N[b][1]}" stroke="${w<0?'#f66':'#6af'}" stroke-width="${Math.max(1,Math.abs(w)*14)}" ${dash?'stroke-dasharray="4 4"':''} opacity=".8"/>`;if(lab)g+=`<text x="${(N[a][0]+N[b][0])/2+4}" y="${(N[a][1]+N[b][1])/2}" fill="#ddd" font-size="11">${lab}</text>`};
+ ['SPX','NDX','GOLD','DXY','TLT'].forEach(k=>{L('LIQ',k,0.05,1);L(k,'BTC',S[k].now90,0,S[k].now90)});L('BTC','ETH',S.ETH.now90,0,S.ETH.now90);L('ETH','ALT',0.05,1,'not measured');
+ Object.entries(N).forEach(([k,v])=>g+=`<circle cx="${v[0]}" cy="${v[1]}" r="${k==='BTC'?20:k==='LIQ'?16:12}" fill="${k==='BTC'?'#f0b90b':'#243044'}" stroke="#6af"/><text x="${v[0]}" y="${v[1]+(k==='LIQ'?-20:-16)}" fill="#fff" font-size="12" text-anchor="middle">${v[2]}</text>`);
+ g+='<text x="8" y="335" fill="#9aa" font-size="10">blue = moves together, red = opposite, dashed = framework link, not measured</text>';$('tree').innerHTML=g;
+ const dc=()=>{const w=$('cw').value,c=mk('cCorr');Object.keys(NAMES).forEach(k=>line(c,M.roll[k+'_'+w].map(x=>({time:ts(x[0]),value:x[1]})),COL[k],1));c.timeScale().fitContent()};$('cw').onchange=dc;dc();
+ const wk=M.weekly,rc=mk('cRS',300),now={};['BTC','ETH','SPX','GOLD','DXY','TLT'].forEach(k=>{const a=wk[k];const d=a.slice(13).map((x,i)=>({time:ts(x[0]),value:(x[1]/a[i][1]-1)*100})).filter(x=>x.time>ts('2023-01-01'));now[k]=d.at(-1).value;line(rc,d,COL[k],k==='BTC'?2:1)});rc.timeScale().fitContent();
+ $('rsNow').innerHTML='Last 13 weeks, leader first: '+Object.entries(now).sort((a,b)=>b[1]-a[1]).map(x=>`<b style="display:inline;font-size:13px;color:${COL[x[0]]}">${x[0]} ${x[1].toFixed(1)}%</b>`).join(' · ');
+ const bd=M.btc_daily,cc=mk('cCyc');cc.priceScale('right').applyOptions({mode:1});const s=line(cc,bd.map(x=>({time:ts(x[0]),value:x[1]})),'#fff',1);
+ const wkc=bd.filter((x,i)=>i%7===0),ma=wkc.map((x,i)=>i<199?null:{time:ts(x[0]),value:wkc.slice(i-199,i+1).reduce((a,y)=>a+y[1],0)/200}).filter(Boolean);line(cc,ma,'#ff7b39',2);window.MA200W=ma.at(-1).value;
+ const mk2=[['2013-12-04','top 2013 (pre-data)','#f44'],['2015-01-14','bottom 2015','#3c3'],['2016-07-09','halving','#6af'],['2017-12-17','top 2017','#f44'],['2018-12-15','bottom 2018','#3c3'],['2020-05-11','halving','#6af'],['2021-11-10','top 2021','#f44'],['2022-11-21','bottom 2022','#3c3'],['2024-04-20','halving','#6af'],['2025-10-06','high 2025','#f44'],['2028-04-15','next halving ~','#6af']].filter(x=>x[0]>=bd[0][0]&&x[0]<=bd.at(-1)[0]);
+ s.setMarkers(mk2.map(x=>({time:ts(bd.find(y=>y[0]>=x[0])[0]),position:x[2]==='#3c3'?'belowBar':'aboveBar',color:x[2],shape:x[2]==='#6af'?'circle':x[2]==='#f44'?'arrowDown':'arrowUp',text:x[1]})));cc.timeScale().fitContent();
+ $('cycNote').textContent=`200-week MA now ≈ ${fmt(MA200W)}. Yahoo BTC history starts ${bd[0][0]}, so the 2013 top is noted but not on the chart. The 4-year rhythm (halving → top ~12-18 months later → bottom ~1 year after) is a tendency, not a law.`}
+
+function chol(A){const n=A.length,L=A.map(()=>Array(n).fill(0));for(let i=0;i<n;i++)for(let j=0;j<=i;j++){let s=A[i][j];for(let k=0;k<j;k++)s-=L[i][k]*L[j][k];L[i][j]=i===j?Math.sqrt(Math.max(s,1e-9)):s/L[j][j]}return L}
+const nrm=()=>Math.sqrt(-2*Math.log(Math.random()||1e-9))*Math.cos(2*Math.PI*Math.random());
+function preset(){const p=$('tp').value,last=M.last.BTC;const P={m:[0.94,1.12,75000,120,1.75,240,false],bear:[0.88,1.12,75000,90,0.6,180,false],fast:[0.92,1.08,78000,45,2.0,200,true]}[p];
+ $('tLo').value=Math.round(last*P[0]/1000)*1000;$('tHi').value=Math.round(last*P[1]/1000)*1000;$('tWick').value=P[2];$('tDur').value=P[3];$('tTgt').value=Math.round(last*P[4]/1000)*1000;$('tRun').value=P[5];$('tAlt').checked=P[6]}
+function thesis(){const S=M.stats,C=S.corrmat1y,V=S.vol1y,K=['BTC','SPX','GOLD','ETH'],L=chol(K.map(a=>K.map(b=>C[a][b])));
+ const p0=(typeof D!=='undefined'&&D)?D.bars.at(-1).close:M.last.BTC,lo=+$('tLo').value,hi=+$('tHi').value,wk=+$('tWick').value,dur=+$('tDur').value,tg=+$('tTgt').value,run=+$('tRun').value,alt=$('tAlt').checked,T=dur+run,mid=(lo+hi)/2,N=500;
+ const paths=[],rel={BTC:[],SPX:[],GOLD:[],ETH:[],ALT:[]};for(const k in rel)for(let d=0;d<=T;d++)rel[k][d]=[];
+ for(let n=0;n<N;n++){let b=p0,x={SPX:1,GOLD:1,ETH:1,ALT:1};const pth=[b],wd=Math.floor(Math.random()*dur);
+  for(let d=1;d<=T;d++){const z0=K.map(nrm),z=L.map(r=>r.reduce((s,v,i)=>s+v*z0[i],0));let r;
+   if(d<=dur){r=0.06*Math.log(mid/b)+V.BTC*0.8/Math.sqrt(365)*z[0];if(d===wd)r+=Math.log(wk/b)*0.9;if(d===wd+3)r+=Math.log(mid/b)*0.5}
+   else r=Math.log(tg/b)/(T-d+1)*1.0+V.BTC/Math.sqrt(365)*z[0];
+   b*=Math.exp(r);pth.push(b);const e=r-V.BTC/Math.sqrt(365)*z[0];
+   x.SPX*=Math.exp(0.08/365+V.SPX/Math.sqrt(365)*z[1]);x.GOLD*=Math.exp(0.05/365+V.GOLD/Math.sqrt(365)*z[2]);
+   const er=S.beta_on_btc1y.ETH*e+V.ETH/Math.sqrt(365)*z[3];x.ETH*=Math.exp(er);x.ALT*=Math.exp((alt&&d>dur?1.6:1.1)*er+(alt&&d>dur?0.002:-0.0005));
+   rel.BTC[d].push(b/p0);for(const k of['SPX','GOLD','ETH','ALT'])rel[k][d].push(x[k])}rel.BTC[0].push(1);for(const k of['SPX','GOLD','ETH','ALT'])rel[k][0].push(1);paths.push(pth)}
+ const t0=Math.floor(Date.now()/864e5)*86400,q=(a,p)=>{a.sort((u,v)=>u-v);return a[Math.floor(p*(a.length-1))]};
+ const c=mk('cTh');paths.slice(0,20).forEach(p=>line(c,p.map((v,d)=>({time:t0+d*86400,value:v})),'rgba(120,160,255,.25)',1));
+ const bt=d=>paths.map(p=>p[d]);[[.1,'#f44'],[.5,'#f0b90b'],[.9,'#3c3']].forEach(([p,col])=>line(c,paths[0].map((_,d)=>({time:t0+d*86400,value:q(bt(d),p)})),col,2));
+ const s0=line(c,[{time:t0,value:p0}],'#fff');hline(s0,lo,'#888','range low');hline(s0,hi,'#888','range high');hline(s0,wk,'#f66','wick');hline(s0,tg,'#3c3','target');c.timeScale().fitContent();
+ const c2=mk('cTh2');for(const k in rel)line(c2,rel[k].map((a,d)=>({time:t0+d*86400,value:(q(a,.5)-1)*100})),COL[k],2);c2.timeScale().fitContent();
+ $('thLeg').innerHTML=Object.keys(rel).map(k=>`<span style="color:${COL[k]}">■ ${k}</span>`).join(' ')+`<br>Shocks correlated with the measured 1-year correlation matrix (BTC-S&P ${C.BTC.SPX}, BTC-gold ${C.BTC.GOLD}, BTC-ETH ${C.BTC.ETH}); ETH follows BTC's trend with measured beta ${S.beta_on_btc1y.ETH}. Alts are a synthetic basket (assumed 1.1× ETH, 1.6× in alt season); not measured.`;
+ const end=k=>rel[k][T];$('thT').innerHTML=`<tr><th>At day ${T}</th>${Object.keys(rel).map(k=>`<th>${k}</th>`).join('')}</tr>`+[['P10',.1],['Median',.5],['P90',.9]].map(([n,p])=>`<tr><td>${n}</td>${Object.keys(rel).map(k=>`<td>${((q(end(k),p)-1)*100).toFixed(0)}%</td>`).join('')}</tr>`).join('')+`<tr><td>Hit wick level</td><td colspan=5>${(paths.filter(p=>Math.min(...p.slice(0,dur))<=wk*1.01).length/N*100).toFixed(0)}% of BTC paths</td></tr>`;
+ const R=(e,s,t)=>(t-e)/(e-s),lens=[['Day trader','Scalp inside the range. Buy near the low, take profit at the middle. Tight stop just under the low. Many small trades.',lo*1.01,lo*0.985,mid],
+  ['Swing trader','Buy the range low, sell the range high. Stop below the wick level so the expected flush does not stop you out.',lo*1.005,Math.min(wk,lo)*0.98,hi*0.98],
+  ['Macro trader','Accumulate across the range (average = middle), size for the cycle, ignore daily noise. Exit only on a weekly close under the 200-week MA.',mid,Math.min(window.MA200W||lo*0.8,wk*0.95),tg]];
+ $('lenses').innerHTML=lens.map(l=>{const r=R(l[2],l[3],l[4]),ok=r>=3;return`<div class="card half"><b>${l[0]}</b><small>${l[1]}</small><br>Entry ${fmt(l[2])} · Stop ${fmt(l[3])} · Target ${fmt(l[4])}<br><span class="${ok?'ok':'warn'}" style="font-size:20px">${r.toFixed(2)}R ${ok?'passes 3R':'⚠ under 3R: skip by Michael\'s rule'}</span></div>`}).join('');
+ const wkB=M.weekly.BTC,wc=wkB.at(-1)[1],sp=M.weekly.SPX,dx=M.weekly.DXY,spCh=(sp.at(-1)[1]/sp.at(-5)[1]-1)*100,dxCh=(dx.at(-1)[1]/dx.at(-5)[1]-1)*100,c30=S.SPX.now30;
+ const inv=[['Weekly close below range low',`last weekly close ${fmt(wc)} vs low ${fmt(lo)}`,wc<lo],['Weekly close below 200-week MA',`${fmt(wc)} vs ${fmt(MA200W)}`,wc<MA200W],['Wick goes deeper than the thesis wick',`wick level ${fmt(wk)}; live price ${fmt(p0)}`,p0<wk],
+  ['BTC/S&P link breaks while S&P falls (30d corr < 0.2 and S&P down > 5% in 4 wks)',`30d corr ${c30}, S&P 4-wk ${spCh.toFixed(1)}%`,c30<0.2&&spCh<-5],['Dollar spike (DXY up > 3% in 4 wks)',`DXY 4-wk ${dxCh.toFixed(1)}% (now ${dx.at(-1)[1].toFixed(2)})`,dxCh>3],['Alt season shows up early (would contradict "no alt season yet")','watch ETH/BTC and alt RS on the Money Flow tab; ETH 90d corr '+S.ETH.now90,false]];
+ $('invT').innerHTML='<tr><th>Breaks the thesis if…</th><th>Current value</th><th>Status</th></tr>'+inv.map(x=>`<tr><td>${x[0]}</td><td>${x[1]}</td><td class="${x[2]?'warn':'ok'}">${x[2]?'TRIGGERED':'intact'}</td></tr>`).join('')+`<tr><td colspan=3><small>Market data as of ${M.last_day}.</small></td></tr>`;window.THESIS_DRAWN=true}
+$('tp').onchange=()=>{preset();thesis()};$('tGo').onclick=thesis;
+const _fl=()=>{try{flow();preset();thesis()}catch(e){$('status').textContent+=' · flow error: '+e.message;console.error(e)}};
+if(location.hash==='#thesis')_fl();else setTimeout(_fl,0);

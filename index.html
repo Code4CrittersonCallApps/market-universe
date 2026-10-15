@@ -1,0 +1,28 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Market Universe</title>
+<style>body{margin:0;background:#0b0f17;color:#e8ecf3;font:15px system-ui}main{max-width:1000px;margin:auto;padding:14px}
+.crumb a{color:#f0b90b;text-decoration:none}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.card{background:#151c2a;border:1px solid #263248;border-radius:12px;padding:12px;cursor:pointer}.card:hover{border-color:#f0b90b}
+.card b{font-size:17px}.tag{display:inline-block;font-size:11px;padding:2px 6px;border-radius:8px;margin:2px;background:#263248}
+.live{background:#1d5a33}.building{background:#6b4b10}.sch{background:#1b3f73}.uph{background:#4a2a6b}.flag{background:#2c3a52;cursor:pointer}
+h1{margin:6px 0}h3{margin:16px 0 6px;color:#9fb0cc;font-size:13px;text-transform:uppercase}a.d{display:block;color:#7fd1ff;margin:4px 0}</style></head>
+<body><main><div class="crumb" id="cr"></div><h1 id="ti"></h1><div id="bd"></div></main>
+<script src="tree.js"></script><script>
+const IDX=new Set(['SPX','NASDAQ','RUT','DJI','TNX','US10Y','US02Y','2s10s','HY OAS','IG OAS','Case-Shiller','30Y mortgage','Housing starts','GOLD_FUT','SILVER_FUT','OIL_FUT','OIL','COPPER','EURUSD','USDJPY','USDCNY','DXY','VIX','MOVE','GPR index','WALCL','RRP','TGA','US M2','Global M2','Fed funds']);
+const CRY=n=>{let p=n;while(p){if(p.n==='Crypto')return 1;p=p.up}return 0};
+function link(t){(function w(n,up){n.up=up;(n.kids||[]).forEach(k=>w(k,n))})(TREE,null)}link();
+function find(path){let n=TREE;for(const p of path){n=(n.kids||[]).find(k=>k.n===p);if(!n)return null}return n}
+function buy(n,cr){if(n.fund)return'<span class="tag sch">Schwab IRA</span>';if(IDX.has(n.n))return'<span class="tag">index/data, not buyable</span>';
+ if(cr&&!/^(MSTR|COIN|HOOD|MARA|RIOT|CLSK|HUT|IREN|CORZ|WULF|CIFR)$/.test(n.n))return'<span class="tag uph">Uphold (verify listing)</span>';return'<span class="tag sch">Schwab IRA</span>'}
+const enc=p=>'#/'+p.map(encodeURIComponent).join('/');
+function render(){const path=location.hash.replace(/^#\/?/,'').split('/').filter(Boolean).map(decodeURIComponent);const n=find(path)||TREE;
+ const cr=['<a href="#/">Universe</a>'];path.forEach((p,i)=>cr.push('<a href="'+enc(path.slice(0,i+1))+'">'+p+'</a>'));document.getElementById('cr').innerHTML=cr.join(' › ');
+ const level=['Universe','Galaxy','Solar system','Asset','Asset'][path.length];document.getElementById('ti').textContent=n.n+' · '+level+(n.status?' ':'');
+ let h='';if(n.status)h+='<span class="tag '+n.status+'">'+(n.status==='live'?'dashboards live':'building (stub: live free-data gauges)')+'</span>';
+ if(n.note)h+='<p>'+n.note+'</p>';const c=CRY(n);
+ if(n.flag&&n.flag.length)h+='<h3>Flagships</h3>'+n.flag.map(f=>'<span class="tag flag">'+f+'</span> '+buy({n:f},c&&!/^(IBIT|ETHA|BSOL|XRPZ|BAVA|TDOT)$/.test(f)).replace('tag','tag').replace('</span>','</span>')).join(' ');
+ if(n.dash&&n.dash.length)h+='<h3>Dashboards</h3>'+n.dash.map(d=>'<a class="d" href="'+d.u+'">▶ '+d.t+'</a>').join('');
+ if(n.gauges)h+='<h3>Live gauges (free data)</h3>'+n.gauges.map(d=>'<a class="d" target="_blank" href="'+d.u+'">◎ '+d.t+'</a>').join('');
+ if(n.kids&&n.kids.length){h+='<h3>'+(path.length?'Inside':'Galaxies ('+n.kids.length+')')+'</h3><div class="grid">'+n.kids.map(k=>'<div class="card" onclick="location.hash=\''+enc(path.concat(k.n)).replace(/'/g,"\\'")+'\'"><b>'+k.n+'</b><br>'+(k.status?'<span class="tag '+k.status+'">'+k.status+'</span>':'')+(k.kids&&k.kids.length?'<span class="tag">'+k.kids.length+' inside</span>':buy(k,c))+(k.note?'<br><small>'+k.note+'</small>':'')+'</div>').join('')+'</div>'}
+ else if(!n.status){h+='<h3>Open</h3><a class="d" target="_blank" href="https://www.tradingview.com/search/?query='+encodeURIComponent(n.n.replace(/ \(.*\)/,''))+'">TradingView: '+n.n+'</a>'+buy(n,c)}
+ document.getElementById('bd').innerHTML=h;scrollTo(0,0)}
+onhashchange=render;render();</script><script src="nav.js" defer></script></body></html>

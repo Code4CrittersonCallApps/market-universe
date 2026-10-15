@@ -1,0 +1,71 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sheehan Crypto Hub</title>
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+body{margin:0;font-family:system-ui,Arial;background:#0f1419;color:#e6e6e6}
+header{padding:12px 16px;background:#1a2230;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+h1{font-size:18px;margin:0 12px 0 0}nav button,select,input,button{background:#243044;color:#fff;border:1px solid #3a4a63;border-radius:6px;padding:6px 10px;font-size:14px}
+nav button.on{background:#f0b90b;color:#000}.pane{display:none;padding:12px 16px}.pane.on{display:block}
+.disc{background:#3a1d1d;border:1px solid #a33;color:#ffd5d5;padding:6px 10px;border-radius:6px;font-size:13px;margin:6px 0 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}.card{background:#1a2230;border-radius:8px;padding:10px}
+.card b{display:block;font-size:20px}.k{font-size:12px;color:#9aa}.chart{height:380px;width:100%;margin:8px 0}
+.grade{font-size:48px;font-weight:800}.S{color:#f0b90b}.A{color:#3c3}.B{color:#6af}.C{color:#999}
+.row{display:flex;flex-wrap:wrap;gap:12px}.half{flex:1 1 420px;min-width:300px}.warn{color:#ff6b6b;font-weight:700}.ok{color:#4c4}
+table{border-collapse:collapse;width:100%;font-size:13px}td,th{border-bottom:1px solid #2a3547;padding:4px;text-align:left}
+label{font-size:13px;margin-right:8px}small{color:#9aa}
+</style></head><body>
+<header><h1>Sheehan Crypto Hub</h1>
+<select id="asset"><option value="BTC">Bitcoin (BTC)</option><option value="ETH">Ethereum (ETH)</option></select>
+<nav><button data-p="universe" class="on">Universe</button><button data-p="lab">Lab</button><button data-p="learn">Learn</button><button data-p="data">1 Data Board</button><button data-p="sim">2 Theory Sim</button><button data-p="draw">3 Day Trader vs Pro</button><button data-p="flow">Money Flow History</button><button data-p="thesis">Thesis Simulator</button><button data-p="alts">Alt Bets</button><button data-p="yield">Staking / Yield</button></nav>
+<small id="status">loading…</small></header>
+
+<section id="universe" class="pane on"></section><section id="lab" class="pane"></section><section id="learn" class="pane"></section><section id="data" class="pane"><div class="disc">I am not a wealth advisor. Past results do not guarantee future results. Read-only public data, not advice.</div>
+<div class="row"><div class="card" style="min-width:160px"><div class="k">Setup grade</div><div id="grade" class="grade">–</div><div id="gradeWhy" class="k"></div></div>
+<div class="grid" style="flex:1" id="cards"></div></div>
+<div id="cData" class="chart"></div><small>Daily close · 50/200 MA · fib retracement off 180-day swing · support/resistance (pivot clusters). S/A only when 4+ / 3 bullish signals stack.</small>
+<table id="sigs"></table></section>
+
+<section id="sim" class="pane"><div class="disc">THEORY SIMULATION, not data. I am not a wealth advisor. Past results do not guarantee future results.</div>
+<div><label>Horizon days <input id="hz" type="number" value="90" style="width:60px"></label>
+<label>Custom drift %/yr <input id="drift" type="range" min="-100" max="200" value="20"><span id="driftV"></span></label>
+<label>Volatility %/yr <input id="vol" type="range" min="10" max="150" value="55"><span id="volV"></span></label>
+<button id="runSim">Run Monte Carlo</button></div>
+<div id="cSim" class="chart"></div><small>Bull/base/bear = fixed annual drifts (+80% / +10% / −50%). Cone = 1,000 GBM paths, P10/P50/P90. Gold = custom.</small>
+<table id="simT"></table>
+<h3>Position calculator (3R rule)</h3>
+<label>Account $ <input id="acct" type="number" value="10000" style="width:90px"></label><label>Risk % <input id="riskp" type="number" value="1" style="width:50px"></label>
+<label>Entry <input id="entry" type="number" style="width:100px"></label><label>Stop <input id="stop" type="number" style="width:100px"></label><label>Target <input id="tgt" type="number" style="width:100px"></label>
+<button id="calc">Calc</button><div id="calcOut" class="card" style="margin-top:8px"></div></section>
+
+<section id="draw" class="pane"><div class="disc">I am not a wealth advisor. Past results do not guarantee future results. Illustration of two drawing styles, not signals.</div>
+<div class="row"><div class="half"><h3>What a day trader would draw</h3><div id="cDay" class="chart"></div>
+<small>Hourly candles (last ~12 days). Many lines: every recent intraday pivot gets a trendline/level, a tight fib off the last 48h swing, VWAP-style session mean. Lots of noise, many invalidations.</small></div>
+<div class="half"><h3>What a pro would draw</h3><div id="cPro" class="chart"></div>
+<small>Weekly closes. Few lines: 2–3 high-timeframe levels that held multiple times, 200-day/≈30-week trend, one major fib off the cycle swing. Trades only at those levels.</small></div></div></section>
+
+<section id="alts" class="pane"><div class="disc">ALT BETS: only after the BTC/ETH base grows. I am not a wealth advisor. Past results do not guarantee future results.</div>
+<table id="altT"></table>
+<h3>"Musical chairs" fee warning</h3>
+<label>Rotate $ <input id="rot" type="number" value="5000"></label><label>Hops <input id="hops" type="number" value="4" style="width:50px"></label><label>Fee+spread % per trade <input id="fee" type="number" value="0.6" step="0.1" style="width:60px"></label>
+<div id="rotOut" class="card"></div></section>
+
+<section id="yield" class="pane"><div class="disc">Staking/residual yield is kept separate from trades. I am not a wealth advisor. Past results do not guarantee future results. APYs change; lockups, slashing and exchange risk apply.</div>
+<div><input id="yA" placeholder="Asset" value="ETH" style="width:70px"><input id="yAmt" type="number" placeholder="Amount" value="2" style="width:80px"><input id="yApy" type="number" placeholder="APY %" value="3" style="width:70px"><input id="yEx" placeholder="Exchange/wallet" value="Coinbase"><button id="yAdd">Add</button></div>
+<table id="yT"></table></section>
+
+<section id="flow" class="pane"><div class="disc">DATA (history). I am not a wealth advisor. Past results do not guarantee future results. Correlation is a tendency, not 100%.</div>
+<p><i>Money flows through markets like seasons: predictable in kind, surprising in weather.</i> Parent → child: global liquidity/macro → stocks, gold, dollar, rates → Bitcoin (the leader) → Ethereum → alts. Thicker line = stronger 90-day correlation with BTC right now.</p>
+<div class="row"><div class="half"><svg id="tree" viewBox="0 0 600 340" style="width:100%;background:#1a2230;border-radius:8px"></svg></div><div class="half"><table id="corrT"></table><small id="flowSrc"></small></div></div>
+<h3>Rolling correlation of BTC daily moves vs each</h3><label><select id="cw"><option value="90">90-day</option><option value="30">30-day</option></select></label><div id="cCorr" class="chart"></div>
+<h3>Who is leading? (13-week relative strength, % change)</h3><div id="cRS" class="chart" style="height:300px"></div><div id="rsNow" class="k"></div>
+<h3>BTC cycles (log scale): tops, bottoms, halvings, 200-week MA</h3><div id="cCyc" class="chart"></div><div id="cycNote" class="k"></div></section>
+<section id="thesis" class="pane"><div class="disc">THESIS SIMULATION, not data. I am not a wealth advisor. Past results do not guarantee future results.</div>
+<div><label>Preset <select id="tp"><option value="m">Michael default: bottom is in, range, wick ~$75k, no alt season yet, later blow-off</option><option value="bear">Bear: range breaks down</option><option value="fast">Fast breakout, alt season</option></select></label><br>
+<label>Range low <input id="tLo" type="number" style="width:90px"></label><label>Range high <input id="tHi" type="number" style="width:90px"></label><label>Wick to <input id="tWick" type="number" style="width:90px"></label>
+<label>Range days <input id="tDur" type="number" value="120" style="width:60px"></label><label>Breakout target <input id="tTgt" type="number" style="width:100px"></label><label>Run days after <input id="tRun" type="number" value="240" style="width:60px"></label>
+<label><input id="tAlt" type="checkbox"> Alt season</label><button id="tGo">Simulate</button></div>
+<div class="row"><div class="half"><h4>BTC paths (P10/P50/P90 + 20 samples)</h4><div id="cTh" class="chart"></div></div><div class="half"><h4>Correlated paths, median % change (Cholesky Monte Carlo)</h4><div id="cTh2" class="chart"></div><div id="thLeg" class="k"></div></div></div>
+<table id="thT"></table>
+<h3>Three trader lenses on the same thesis (3R minimum)</h3><div class="row" id="lenses"></div>
+<h3>Invalidation panel: what breaks the thesis</h3><table id="invT"></table></section>
+<script src="data/moneyflow.js"></script><script src="app.js"></script><script src="data/lab.js"></script><script src="flow.js"></script><script src="lab.js"></script><script src="learn.js"></script><script src="data/xrp_oi.js"></script><script src="xrp.js"></script><script src="data/universe.js"></script><script src="data/cg_snapshot.js"></script><script src="universe.js"></script><script src="universe2.js"></script><script src="data/smart.js"></script><script src="clean.js"></script><script src="clean2.js"></script><script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script><script src="data/gravity.js"></script><script src="gravity.js"></script><script src="data/compare.js"></script><script src="data/zones.js"></script><script src="data/board.js"></script><script src="features.js"></script><script>labInit();learnInit();xrpInit();uniInit();u2Init();cleanInit()</script><script src="https://code4crittersoncallapps.github.io/market-universe/nav.js" defer></script></body></html>
