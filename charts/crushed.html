@@ -61,7 +61,7 @@ const C=[
  ['Technical',r=>r.sTrend,r=>sc(r.sTrend)],
  ['EMA 21/55 (180d)',r=>({'Above both':5,'Reclaiming 21':4,'Retesting 55':3,'Lost 21, above 55':2,'Below both':1})[r.emaState]||0,r=>emaV(r)],
  ['Day',r=>r.sDay,r=>sc(r.sDay)],['Swing',r=>r.sSwing,r=>sc(r.sSwing)],['Moon',r=>r.sMoon,r=>sc(r.sMoon)],
- ['Entry zone',r=>r.entryLo,r=>r.entryLo==null?'–':fmtP(r.entryLo)+'–'+fmtP(r.entryHi)],
+ ['Entry zone',r=>r.entryLo,r=>r.entryLo==null?'–':fmtP(r.entryLo)+(fmtP(r.entryLo)===fmtP(r.entryHi)?'':'–'+fmtP(r.entryHi))],
  ['Stop',r=>r.stop,r=>fmtP(r.stop)],['Target',r=>r.target,r=>fmtP(r.target)],
  ['R:R',r=>r.rr,r=>r.rr==null?'–':'<b>'+r.rr.toFixed(1)+'</b>'],
  ['Price',r=>r.price,r=>fmtP(r.price)],
