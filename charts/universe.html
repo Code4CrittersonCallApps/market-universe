@@ -1,0 +1,54 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Buyable Universe: scored cards</title>
+<style>
+:root{--bg:#0b0f17;--card:#151c2a;--line:#263248;--tx:#e8ecf3;--mut:#9fb0cc;--gold:#f0b90b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px system-ui}a{color:#7fd1ff}main{max-width:1200px;margin:auto;padding:12px}
+h1{margin:6px 0}.back{display:inline-block;background:var(--gold);color:#111;font-weight:700;text-decoration:none;padding:8px 13px;border-radius:10px;margin:4px 6px 4px 0}
+.ctl{position:sticky;top:0;background:var(--bg);z-index:5;padding:8px 0;border-bottom:2px solid var(--gold);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ctl input,.ctl select{font-size:16px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--tx)}.ctl input{flex:1 1 160px}
+.tg{padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:var(--card);cursor:pointer;user-select:none}.tg.on{background:var(--gold);color:#111;font-weight:700;border-color:var(--gold)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px;margin-top:10px}
+.cd{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}.hd{display:flex;align-items:center;gap:8px}.hd img{width:24px;height:24px;border-radius:50%}
+.sym{font-weight:800;font-size:16px}.nm{color:var(--mut);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}.px{margin-left:auto;text-align:right;font-weight:700}
+.vn{font-size:10.5px;padding:1px 6px;border-radius:5px;background:#1f2a40;color:#9fd0ff;margin-right:3px}
+.bd{display:flex;gap:5px;flex-wrap:wrap;margin:7px 0}.b{border-radius:8px;padding:3px 7px;font-size:12px;background:#0f1522}.b b{font-size:14px}
+.call{display:inline-block;padding:2px 7px;border-radius:6px;font-size:12px;font-weight:700}.Buyzone{background:#0f3d2a;color:#7ff0b4}.Wait{background:#3d300f;color:#f5d27a}.Skip{background:#2a1d22;color:#c99}
+.pl{font-size:12.5px;color:var(--mut)}.pl b{color:var(--tx)}.el{font-size:12px;margin-top:2px}.mut{color:var(--mut)}
+.more{display:block;margin:14px auto;padding:10px 20px;font-size:15px;border-radius:10px;border:0;background:var(--gold);font-weight:700}
+.legend{color:var(--mut);font-size:12.5px;margin:6px 0}
+</style><script src="../nav.js" defer></script></head><body><main>
+<a class="back" href="../machine.html">← Market Monitor</a><a class="back" href="crushed.html">🔨 Crushed table</a>
+<h1>🛒 Buyable Universe: scored cards</h1>
+<div class="legend">Everything you can easily buy: Uphold + Coinbase crypto, Schwab stocks (S&amp;P 500 + Nasdaq-100) and major ETFs (sector, crypto, commodity, bonds). Built <b id="built"></b>. Scores 0–100: <b>Tech</b> = price vs 21/55 EMA, reclaim, near 30d high, higher lows · <b>Day</b> = momentum, volume spike, volatility, liquidity · <b>Swing</b> = trend + EMA-21 retest + reward:risk · <b>Moon</b> = depth below ATH, room to mcap-ATH price, float, volume ignition · <b>Comp</b> = average. Chart: white price, <span style="color:#f0b90b">gold EMA21</span>, <span style="color:#a78bfa">purple EMA55</span>, ~180 days. Stocks/ETFs: “ATH” = 5-year high. Not advice.</div>
+<div class="ctl"><input id="q" type="search" placeholder="Search ticker or name…">
+<select id="srt"><option value="sBest">Sort: Best trade</option><option value="sTrend">Technical</option><option value="sDay">Day-trade</option><option value="sSwing">Swing</option><option value="sMoon">High-risk / Moon</option><option value="sComp">Composite</option><option value="rr">R:R</option><option value="athPct">Most crushed</option><option value="xMcapAth">x to mcap-ATH</option></select>
+<span class="tg on" data-v="all">All</span><span class="tg" data-v="schwab">Schwab</span><span class="tg" data-v="uphold">Uphold</span><span class="tg" data-v="coinbase">Coinbase</span>
+<select id="cls"><option value="">All classes</option><option value="crypto">Crypto</option><option value="stock">Stocks</option><option value="etf">ETFs</option></select>
+<span class="tg" id="pBuy">Buy zone only</span><span class="tg" id="pCr">🔨 Crushed preset</span><span class="mut" id="cnt"></span></div>
+<div class="grid" id="g"></div><button class="more" id="more">Load more</button>
+</main><script>
+let D={rows:[]},ven='all',lim=60,buy=false,cr=false;
+const fmtP=p=>{if(p==null)return'–';if(p>=1000)return'$'+p.toLocaleString('en-US',{maximumFractionDigits:0});if(p>=1)return'$'+p.toFixed(p>=100?2:3);if(p>=0.01)return'$'+p.toFixed(4);return'$'+p.toPrecision(3)};
+const sc=(l,v)=>'<span class="b">'+l+' <b style="color:'+(v==null?'#9fb0cc':v>=70?'#22c55e':v>=50?'#86c96f':v>=35?'#f59e0b':'#ef4444')+'">'+(v==null?'–':v)+'</b></span>';
+const ema=r=>{if(!r.spark)return'';const W=270,H=56,L=r.spark[0].length;const pl=(a,c,w)=>'<polyline fill="none" stroke="'+c+'" stroke-width="'+w+'" points="'+a.map((v,i)=>(i*(W-2)/(L-1)+1).toFixed(1)+','+(H-2-v*(H-4)/999).toFixed(1)).join(' ')+'"/>';
+ const st=r.emaState,col=st==='Above both'?'#22c55e':st==='Reclaiming 21'?'#86c96f':st==='Below both'?'#ef4444':'#f59e0b',xc=r.emaCross;
+ return '<svg width="100%" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="height:56px">'+pl(r.spark[2],'#a78bfa',1.3)+pl(r.spark[1],'#f0b90b',1.3)+pl(r.spark[0],'#e8ecf3',1.6)+'</svg><div class="el"><b style="color:'+col+'">'+st+'</b> · <span style="color:'+(/Golden|21 >/.test(xc)?'#22c55e':'#ef4444')+'">'+xc+'</span></div>'};
+const tvs=r=>r.cls==='crypto'?(r.ven.includes('coinbase')?'COINBASE:'+r.sym+'USD':'CRYPTO:'+r.sym+'USD'):r.sym;
+function card(r){return '<div class="cd"><div class="hd">'+(r.img?'<img loading="lazy" src="'+r.img+'">':'')+'<div><div class="sym"><a href="https://www.tradingview.com/chart/?symbol='+encodeURIComponent(tvs(r))+'" target="_blank" style="color:inherit">'+r.sym+'</a></div><div class="nm">'+(r.name||'')+'</div></div><div class="px">'+fmtP(r.price)+'<div>'+r.ven.map(v=>'<span class="vn">'+v+'</span>').join('')+'</div></div></div>'
+ +'<div class="bd"><span class="call '+(r.call||'').replace(' ','')+'">'+(r.call||'–')+'</span>'+sc('Tech',r.sTrend)+sc('Day',r.sDay)+sc('Swing',r.sSwing)+sc('Moon',r.sMoon)+sc('Comp',r.sComp)+'</div>'+ema(r)
+ +'<div class="pl">'+(r.entryLo?'Entry <b>'+fmtP(r.entryLo)+(fmtP(r.entryLo)===fmtP(r.entryHi)?'':'–'+fmtP(r.entryHi))+'</b> · Stop <b>'+fmtP(r.stop)+'</b> · Target <b>'+fmtP(r.target)+'</b> · R:R <b>'+(r.rr??'–')+'</b><br>':'')
+ +(r.athPct!=null?(r.athNote||'ATH')+' '+fmtP(r.ath)+' (<b>'+r.athPct.toFixed(0)+'%</b>, '+r.xAth.toFixed(1)+'x)':'')+(r.mcapAthPrice?' · mcap-ATH price <b>'+fmtP(r.mcapAthPrice)+'</b> ('+r.xMcapAth.toFixed(1)+'x)':'')+(r.grp?' · '+r.grp:'')+'</div></div>'}
+function draw(){const s=document.getElementById('q').value.trim().toLowerCase(),k=document.getElementById('srt').value,c=document.getElementById('cls').value;
+ let rs=D.rows.filter(r=>(ven==='all'||r.ven.includes(ven))&&(!c||r.cls===c)&&(!buy||r.call==='Buy zone')&&(!cr||(r.cls==='crypto'&&r.athPct!=null&&r.athPct<=-70))&&(!s||r.sym.toLowerCase().includes(s)||(r.name||'').toLowerCase().includes(s)));
+ const asc=k==='athPct';rs.sort((a,b)=>{const x=a[k],y=b[k];if(x==null)return 1;if(y==null)return -1;return asc?x-y:y-x});
+ document.getElementById('cnt').textContent=rs.length+' assets';document.getElementById('g').innerHTML=rs.slice(0,lim).map(card).join('');
+ document.getElementById('more').style.display=rs.length>lim?'block':'none'}
+document.querySelectorAll('.tg[data-v]').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tg[data-v]').forEach(x=>x.classList.remove('on'));t.classList.add('on');ven=t.dataset.v;lim=60;draw()});
+document.getElementById('pBuy').onclick=e=>{buy=!buy;e.target.classList.toggle('on');lim=60;draw()};
+document.getElementById('pCr').onclick=e=>{cr=!cr;e.target.classList.toggle('on');if(cr)document.getElementById('srt').value='sMoon';lim=60;draw()};
+['q','srt','cls'].forEach(i=>document.getElementById(i).addEventListener(i==='q'?'input':'change',()=>{lim=60;draw()}));
+document.getElementById('more').onclick=()=>{lim+=60;draw()};
+const p=new URLSearchParams(location.search);if(p.get('venue')){ven=p.get('venue');document.querySelectorAll('.tg[data-v]').forEach(x=>x.classList.toggle('on',x.dataset.v===ven))}
+if(p.get('preset')==='crushed'){cr=true;document.getElementById('pCr').classList.add('on');document.getElementById('srt').value='sMoon'}
+fetch('universe.json?'+Date.now()).then(r=>r.json()).then(d=>{D=d;document.getElementById('built').textContent=new Date(d.built_utc).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET';draw()});
+</script></body></html>
