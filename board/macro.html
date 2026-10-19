@@ -1,0 +1,14 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Macro Board · need-to-knows</title><link rel="stylesheet" href="common.css">
+<style>.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}@media(max-width:1000px){.grid{grid-template-columns:repeat(2,1fr)}}
+.tile{background:#121927;border:1px solid #263248;border-radius:10px;padding:10px 12px;cursor:pointer;min-height:150px}.tile:hover,.tile.on{border-color:#f0b90b}
+.tile h2{display:flex;justify-content:space-between}.tile ul{margin:4px 0 0;padding-left:16px;font-size:12.5px}.tile li{margin:3px 0}.tile .src{color:#6f7d95;font-size:11px}
+#drill{margin-top:12px}</style></head><body><script src="../nav.js"></script><main>
+<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;align-items:baseline"><div><h1>Macro Board · major headlines and need-to-knows</h1><div class="sub" id="asof"></div></div>
+<div class="sub"><a href="crypto.html">← Crypto board / BTC Scenario Board</a> · <a href="https://code4crittersoncallapps.github.io/correlation-lab/">Correlation Lab</a> · <a href="../machine.html">Market Monitor</a></div></div>
+<div class="sum" id="sum"></div>
+<h3>Major headlines</h3><div class="hl" id="hl"></div>
+<h3>Need-to-knows (tap a tile to drill down)</h3><div class="grid" id="grid"></div>
+<div id="drill"></div>
+<div class="foot">Market closes are Friday Oct 16 2026 (Yahoo). FRED series carry their own dates. X News items are X's summaries of posts; tap through to verify. Nothing here is an order.</div>
+</main><div id="zoom" onclick="this.style.display='none'"><img id="zimg"></div><script src="macro.js"></script></body></html>
