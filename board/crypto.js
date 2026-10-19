@@ -2,12 +2,12 @@ let B,S={b:'Big 4',c:'BTC',t:'charts'};
 const $=id=>document.getElementById(id),f0=n=>n==null?'–':Math.round(n).toLocaleString('en-US'),usd=n=>n==null?'–':'$'+f0(n),
 pct=(n,s=1)=>n==null?'–':(n>0&&s?'+':'')+n.toFixed(1)+'%',cls=n=>n>0?'g':(n<0?'r':'m'),
 px=p=>p==null?'–':(p>=100?'$'+f0(p):p>=1?'$'+p.toFixed(2):p>=0.01?'$'+p.toFixed(4):'$'+p.toPrecision(3));
-const img=(f,alt)=>`<img class="ch" src="img/${f}" alt="${alt||''}" onclick="zoom(this.src)">`;
+const img=(f,alt)=>`<img class="ch" src="img/${f}?v=20261019a" alt="${alt||''}" onclick="zoom(this.src)">`;
 function zoom(s){$('zimg').src=s;$('zoom').style.display='flex'}
 function readHash(){const h=new URLSearchParams(location.hash.slice(1));if(h.get('b'))S.b=h.get('b');if(h.get('c'))S.c=h.get('c');if(h.get('t'))S.t=h.get('t')}
 function go(o){Object.assign(S,o);location.hash=new URLSearchParams(S).toString();render()}
 window.addEventListener('hashchange',()=>{readHash();render()});
-fetch('board.json').then(r=>r.json()).then(j=>{B=j;readHash();
+fetch('board.json?v=20261019a').then(r=>r.json()).then(j=>{B=j;readHash();
  $('asof').textContent='Data as of '+B.D.asof_et+'. Sources: OKX, Hyperliquid, CoinGecko, CoinPaprika, CoinMetrics, bitcoin-data.com, Yahoo, CBOE, Deribit, FRED, Farside, DefiLlama.';
  $('sum').innerHTML='<b>The answer:</b> '+B.D.summary;
  $('hl').innerHTML=B.H.crypto.map(h=>`<div class="h"><div class="d">${h.date} · ${h.src}</div><b><a href="${h.url}" target="_blank" rel="noopener">${h.t}</a></b><div class="m">${h.note}</div></div>`).join('');
@@ -31,11 +31,18 @@ function mid(){const c=B.coins[S.c];let h=`<div class="card"><h2>${S.c} <span cl
  h+='</div>';
  const b=B.buckets.find(x=>x.name===S.b);if(b){const rk=b.members.map(s=>B.coins[s]).filter(x=>x.rs30!=null).sort((a,b)=>b.rs30-a.rs30).slice(0,12);
   h+=`<div class="card"><h2>${b.name}: who is beating BTC</h2><div class="why">30-day change of each coin priced in BTC. Positive = it outran Bitcoin.</div><table class="rel"><tr><th>coin</th><th class="n">30d vs BTC</th><th>trend</th></tr>`+rk.map(x=>`<tr onclick="go({c:'${x.sym}'})"><td>${x.sym}${x.mine?' ★':''}</td><td class="n ${cls(x.rs30)}">${pct(x.rs30)}</td><td class="${x.tr==='up'?'g':x.tr==='down'?'r':'m'}">${x.tr}${x.coil?' · coiled':''}</td></tr>`).join('')+'</table></div>'}
- $('mid').innerHTML=h}
+ const bt=(B.trades||[]).filter(t=>t.scope==='bucket'&&(t.bucket===S.b||t.sym===S.c));
+ $('mid').innerHTML=(bt.length?bt.map(t=>tradeCard(t,t.sym===S.c||bt.length===1)).join(''):'')+h}
 const TABS=[['charts','Charts'],['history','Chart history'],['learn','Learning'],['else','Anything else?']];
 function right(){$('tabs').innerHTML=TABS.map(([k,n])=>`<button class="${S.t===k?'on':''}" onclick="go({t:'${k}'})">${n}</button>`).join('');
  $('rt').textContent=S.c+' · '+TABS.find(x=>x[0]===S.t)[1];$('right').innerHTML=S.c==='BTC'?BTC[S.t]():COIN[S.t]()}
-function render(){if(!B)return;left();mid();right()}
+function tradeCard(t,open){const lv=t.levels.map(([k,v])=>`<div>${k}</div><div><b>${v}</b></div>`).join('');
+ const ck=t.checks.length?'<h4 style="margin:8px 0 4px">The 4 checks</h4><table>'+t.checks.map(([k,m,n])=>`<tr><td>${k}</td><td class="${m==='✓'?'g':m==='✗'?'r':'y'}" style="font-weight:700">${m}</td><td class="m">${n}</td></tr>`).join('')+'</table>':'';
+ const by=t.buying.length?'<h4 style="margin:8px 0 4px">What you\'re buying</h4><ul style="margin:0;padding-left:18px">'+t.buying.map(x=>`<li>${x}</li>`).join('')+'</ul>':'';
+ return `<details class="trade" ${open?'open':''}><summary><b>${t.title}</b> <span class="${t.cls}" style="font-size:12px">· ${t.status}</span><span class="face">${t.face}</span></summary>`+
+ `<div class="tgrid"><div>${img(t.img,t.title)}</div><div><div class="pillar">${lv}</div>${ck}${by}<div class="m" style="margin-top:6px"><a href="#" onclick="go({c:'${t.sym}',t:'charts'});return false">Open ${t.sym} on the board →</a> · <a href="../charts/calls.html">Call ledger →</a></div></div></div></details>`}
+function trades(){$('trades').innerHTML=(B.trades||[]).filter(t=>t.scope==='top').map(t=>tradeCard(t,true)).join('')}
+function render(){if(!B)return;trades();left();mid();right()}
 function det(title,face,body,open){return `<details ${open?'open':''}><summary><b>${title}</b><span class="face">${face}</span></summary>${body}</details>`}
 // ---------------- BTC
 const LEARN=[
