@@ -4,7 +4,7 @@ function zoom(s){$('zimg').src=s;$('zoom').style.display='flex'}
 const img=f=>`<img class="ch" src="img/${f}" onclick="zoom(this.src)">`;
 const FR=s=>`https://fred.stlouisfed.org/series/${s}`,YH=s=>`https://finance.yahoo.com/quote/${encodeURIComponent(s)}`;
 const m$=n=>(n<0?'-$':'+$')+Math.abs(n).toLocaleString('en-US',{maximumFractionDigits:1})+'M';const a=(u,t)=>`<a href="${u}" target="_blank" rel="noopener">${t}</a>`;
-fetch('board.json').then(r=>r.json()).then(j=>{B=j;build()});
+fetch('board.json?v=20261021a').then(r=>r.json()).then(j=>{B=j;build()});
 window.addEventListener('hashchange',()=>{sel=location.hash.slice(1);drill()});
 function T(){const Q=B.Q,L=B.M.liq,C=B.M.corr,D=B.D,H=B.H;return [
  {k:'stocks',n:'Stocks',face:[[`Nasdaq (QQQ) ${pct(Q.QQQ.w1)} on the week to $${Q.QQQ.last}, worst week in 18 months.`,YH('QQQ'),'Yahoo, Oct 16'],[`VIX ${Q.VIX.last} (${pct(Q.VIX.w1)} w/w). Fear is up, not panic.`,YH('^VIX'),'Yahoo, Oct 16'],[`S&P 500 (SPY) ${pct(Q.SPY.w1)} w/w, only ${Math.abs(Q.SPY.hi52)}% off its high; breadth is the weak spot.`,H.stocks[1].url,H.stocks[1].date]],

@@ -7,7 +7,7 @@ function zoom(s){$('zimg').src=s;$('zoom').style.display='flex'}
 function readHash(){const h=new URLSearchParams(location.hash.slice(1));if(h.get('b'))S.b=h.get('b');if(h.get('c'))S.c=h.get('c');if(h.get('t'))S.t=h.get('t')}
 function go(o){Object.assign(S,o);location.hash=new URLSearchParams(S).toString();render()}
 window.addEventListener('hashchange',()=>{readHash();render()});
-fetch('board.json?v=20261019a').then(r=>r.json()).then(j=>{B=j;readHash();
+fetch('board.json?v=20261021a').then(r=>r.json()).then(j=>{B=j;readHash();
  $('asof').textContent='Data as of '+B.D.asof_et+'. Sources: OKX, Hyperliquid, CoinGecko, CoinPaprika, CoinMetrics, bitcoin-data.com, Yahoo, CBOE, Deribit, FRED, Farside, DefiLlama.';
  $('sum').innerHTML='<b>The answer:</b> '+B.D.summary;
  $('hl').innerHTML=B.H.crypto.map(h=>`<div class="h"><div class="d">${h.date} · ${h.src}</div><b><a href="${h.url}" target="_blank" rel="noopener">${h.t}</a></b><div class="m">${h.note}</div></div>`).join('');
