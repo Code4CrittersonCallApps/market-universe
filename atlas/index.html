@@ -1,0 +1,148 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Market Atlas 3D: the whole money map</title>
+<style>
+:root{--bg:#0b0f17;--card:#121927;--ln:#263248;--gold:#f0b90b;--blue:#7fd1ff;--tx:#e8ecf3;--mut:#9fb0cc}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px system-ui}
+a{color:var(--blue)}h1{font-size:18px;margin:0}h3{color:var(--mut);font-size:12px;text-transform:uppercase;margin:14px 0 6px;letter-spacing:.04em}
+header{padding:10px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-bottom:1px solid var(--ln)}
+.tabs button{background:#243044;color:#fff;border:1px solid #3a4a63;border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer}
+.tabs button.on{background:var(--gold);color:#000;font-weight:700}
+#wrap{display:flex;height:calc(100vh - 92px);min-height:520px}
+#scene{flex:1;position:relative;min-width:0;overflow:hidden}#scene canvas{display:block}
+#side{width:400px;max-width:44vw;overflow:auto;border-left:1px solid var(--ln);padding:12px 14px;background:#0e1420}
+.lbl{color:#fff;font:600 12px system-ui;text-shadow:0 0 4px #000,0 0 8px #000;pointer-events:auto;cursor:pointer;white-space:nowrap;text-align:center}
+.lbl small{display:block;color:var(--gold);font-weight:700}
+.card{background:var(--card);border:1px solid var(--ln);border-radius:10px;padding:10px;margin:8px 0}
+table{width:100%;border-collapse:collapse}td{border-bottom:1px solid var(--ln);padding:6px 4px;vertical-align:top;font-size:13px}td.n{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
+.src{font-size:11px;color:var(--mut)}.est{background:#5a4210;color:#ffd98a;border-radius:5px;padding:0 5px;font-size:10px;font-weight:700;margin-left:4px}
+.bar{height:9px;border-radius:4px;background:var(--gold)}.pill{display:inline-block;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700}
+.up{color:#4cd17a}.dn{color:#ff6b6b}.flat{color:#cfd6e4}
+#legend{position:absolute;left:10px;bottom:10px;background:#0b0f17cc;border:1px solid var(--ln);border-radius:8px;padding:8px 10px;font-size:12px;max-width:330px}
+#ctrl{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:5px}
+#ctrl button{background:#243044cc;color:#fff;border:1px solid #3a4a63;border-radius:6px;padding:5px 8px;font-size:12px;cursor:pointer}
+#ctrl button.on{background:var(--gold);color:#000}
+.step{font-size:15px;line-height:1.45}.navb{display:flex;gap:8px;margin-top:10px}.navb button{flex:1;padding:9px;border-radius:7px;border:1px solid #3a4a63;background:#243044;color:#fff;font-size:14px;cursor:pointer}
+.verdict{font-weight:800;font-size:12px;padding:2px 7px;border-radius:6px}
+@media(max-width:820px){.lbl{font-size:10px}#wrap{flex-direction:column;height:auto}#scene{height:58vh;flex:none}#side{width:100%;max-width:none;border-left:0;border-top:1px solid var(--ln)}#legend{display:none}}
+</style>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+</head><body>
+<header><h1>Market Atlas 3D</h1><span class="src" id="built"></span>
+<nav class="tabs" id="tabs"><button data-t="map" class="on">Map</button><button data-t="owners">Who owns it</button><button data-t="bots">Who trades it</button><button data-t="engine">The engine</button><button data-t="now">Where money is moving now</button><button data-t="teach">Teach it</button><button data-t="sources">Sources & gaps</button></nav></header>
+<div id="wrap"><div id="scene"><div id="ctrl"><button id="bOwn" class="on">Owners layer</button><button id="bFlow" class="on">Flows</button><button id="bDer" class="on">Derivatives</button><button id="bSpin">Auto-rotate</button><button id="bReset">Reset view</button></div>
+<div id="legend"><b>Ball volume = dollars, to scale</b> (radius ∝ ∛$). Bottom ring = asset buckets. Top ring = owners. Gold core = the pump (central banks + credit). Staircase = the risk ladder; blue plane = where the water is today. Teal torus = FX river (flow per day, not a stock). Wire ball = derivatives notional, solid core = their real value. Tap anything.</div></div>
+<aside id="side"></aside></div>
+<script src="../nav.js"></script>
+<script src="data.js"></script>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {CSS2DRenderer,CSS2DObject} from 'three/addons/renderers/CSS2DRenderer.js';
+const A=window.ATLAS,S=A.SRC;document.getElementById('built').textContent='Data pulled '+A.built;
+const $=s=>document.querySelector(s),side=$('#side');
+const fmt=v=>v>=100?'$'+Math.round(v)+'T':v>=10?'$'+v.toFixed(1)+'T':'$'+v.toFixed(2)+'T';
+const sl=k=>S[k]?`<a class="src" href="${S[k][1]}" target="_blank" rel="noopener">${S[k][0]}</a>`:'';
+const E=b=>b?'<span class="est">EST</span>':'';
+// ---------- scene ----------
+const host=$('#scene'),scene=new THREE.Scene();scene.fog=new THREE.FogExp2(0x0b0f17,0.006);
+const cam=new THREE.PerspectiveCamera(50,1,0.1,2000);const ren=new THREE.WebGLRenderer({antialias:true});ren.setPixelRatio(Math.min(2,devicePixelRatio));host.appendChild(ren.domElement);
+const lr=new CSS2DRenderer();lr.domElement.style.cssText='position:absolute;top:0;left:0;pointer-events:none';host.appendChild(lr.domElement);
+const ctl=new OrbitControls(cam,ren.domElement);ctl.enableDamping=true;ctl.autoRotateSpeed=0.6;
+scene.add(new THREE.AmbientLight(0xffffff,0.55));const dl=new THREE.DirectionalLight(0xffffff,1.1);dl.position.set(40,80,50);scene.add(dl);
+const stars=new THREE.BufferGeometry(),sp=[];for(let i=0;i<1500;i++){const r=300+Math.random()*400,t=Math.random()*6.28,p=Math.acos(2*Math.random()-1);sp.push(r*Math.sin(p)*Math.cos(t),r*Math.cos(p),r*Math.sin(p)*Math.sin(t))}
+stars.setAttribute('position',new THREE.Float32BufferAttribute(sp,3));scene.add(new THREE.Points(stars,new THREE.PointsMaterial({color:0x445577,size:1.2})));
+const K=1.25,R=v=>K*Math.cbrt(v);const pick=[],objs={};
+function label(txt,sub,pos,id){const d=document.createElement('div');d.className='lbl';d.innerHTML=txt+(sub?`<small>${sub}</small>`:'');d.onclick=()=>select(id);const o=new CSS2DObject(d);o.position.copy(pos);scene.add(o);return o}
+function ball(id,v,col,pos,opts={}){const g=new THREE.SphereGeometry(R(v),48,32);const m=new THREE.MeshStandardMaterial({color:col,roughness:.45,metalness:.25,emissive:col,emissiveIntensity:.12,transparent:!!opts.op,opacity:opts.op||1});
+ const s=new THREE.Mesh(g,m);s.position.copy(pos);s.userData.id=id;scene.add(s);pick.push(s);objs[id]=s;return s}
+// buckets ring (y=0)
+const B=A.buckets,ring=36;
+B.forEach((b,i)=>{const a=i/B.length*Math.PI*2,p=new THREE.Vector3(Math.cos(a)*ring,0,Math.sin(a)*ring);b.pos=p;
+ ball(b.id,b.v,b.col,p);if(b.ghost){const gm=new THREE.Mesh(new THREE.SphereGeometry(R(b.ghost),32,20),new THREE.MeshBasicMaterial({color:b.col,wireframe:true,transparent:true,opacity:.18}));gm.position.copy(p);scene.add(gm)}
+ label(b.n,fmt(b.v)+(b.ghost?' · all debt '+fmt(b.ghost):''),p.clone().add(new THREE.Vector3(0,R(b.ghost||b.v)+1.6,0)),b.id)});
+// derivatives (off to side)
+const dp=new THREE.Vector3(-70,6,-10),dg=new THREE.Group();scene.add(dg);
+const dw=new THREE.Mesh(new THREE.SphereGeometry(R(A.deriv.notional),36,24),new THREE.MeshBasicMaterial({color:0xb07dff,wireframe:true,transparent:true,opacity:.28}));dw.position.copy(dp);dw.userData.id='deriv';dg.add(dw);pick.push(dw);
+const dc=new THREE.Mesh(new THREE.SphereGeometry(R(A.deriv.gmv),32,20),new THREE.MeshStandardMaterial({color:0xb07dff,emissive:0xb07dff,emissiveIntensity:.3}));dc.position.copy(dp);dc.userData.id='deriv';dg.add(dc);pick.push(dc);
+const dlb=label('Derivatives (shadow layer)','notional $845T · real value $22.8T',dp.clone().add(new THREE.Vector3(0,R(A.deriv.notional)+1.5,0)),'deriv');
+// FX river torus
+const fxr=ring+14,fx=new THREE.Mesh(new THREE.TorusGeometry(fxr,0.35,8,180),new THREE.MeshBasicMaterial({color:0x2ec4b6,transparent:true,opacity:.55}));fx.rotation.x=Math.PI/2;fx.position.y=-6;fx.userData.id='fx';scene.add(fx);pick.push(fx);
+label('FX river','$9.5T per day',new THREE.Vector3(fxr,-4,0),'fx');
+const fxp=new THREE.Group();scene.add(fxp);for(let i=0;i<90;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.45,8,6),new THREE.MeshBasicMaterial({color:0x7ff5e8}));m.userData.a=i/90*Math.PI*2;fxp.add(m)}
+// pump
+const pump=new THREE.Mesh(new THREE.IcosahedronGeometry(4.2,1),new THREE.MeshStandardMaterial({color:0xffb020,emissive:0xff9f00,emissiveIntensity:.8,flatShading:true}));pump.position.set(0,-2,0);pump.userData.id='engine';scene.add(pump);pick.push(pump);
+label('THE PUMP','central banks + credit',new THREE.Vector3(0,4,0),'engine');
+// owners ring (y=34)
+const O=A.owners,og=new THREE.Group();scene.add(og);const ownLbl=[];
+O.forEach((o,i)=>{const a=i/O.length*Math.PI*2+0.25,p=new THREE.Vector3(Math.cos(a)*44,56,Math.sin(a)*44);o.pos=p;const s=ball(o.id,o.v,o.col,p,{op:.85});og.add(s);
+ const l=label(o.n,fmt(o.v)+(o.est?' est.':''),p.clone().add(new THREE.Vector3(0,R(o.v)+1.4,0)),o.id);ownLbl.push(l);
+ o.links.forEach(t=>{const tp=t==='fx'?new THREE.Vector3(fxr*Math.cos(a),-6,fxr*Math.sin(a)):t==='deriv'?dp:B.find(b=>b.id===t).pos;
+  const geo=new THREE.BufferGeometry().setFromPoints([p,tp]);og.add(new THREE.Line(geo,new THREE.LineBasicMaterial({color:o.col,transparent:true,opacity:.16})))})});
+// risk ladder staircase
+const L=A.ladder,lg=new THREE.Group(),ladLbl=[];lg.position.set(-30,-14,-78);lg.rotation.y=0;scene.add(lg);
+L.forEach((r,i)=>{const h=2+i*3.2,c=new THREE.Color().setHSL(.55-i*.07,.7,.5);const st=new THREE.Mesh(new THREE.BoxGeometry(6,h,5),new THREE.MeshStandardMaterial({color:c,transparent:true,opacity:.8}));st.position.set(i*6.2,h/2,0);st.userData.id='ladder';lg.add(st);pick.push(st);
+ const l=new CSS2DObject(Object.assign(document.createElement('div'),{className:'lbl',innerHTML:r[0]+(r[1]?`<small>${r[1]}</small>`:'')}));l.element.onclick=()=>select('ladder');l.position.set(i*6.2,h+1.6,0);lg.add(l);ladLbl.push(l)});
+const lvl=A.level,wp=new THREE.Mesh(new THREE.BoxGeometry((lvl+1)*6.2+1,0.25,7),new THREE.MeshBasicMaterial({color:0x3aa0ff,transparent:true,opacity:.45}));wp.position.set(((lvl+1)*6.2)/2-3.6,2+lvl*3.2-1,0);lg.add(wp);
+const wl=new CSS2DObject(Object.assign(document.createElement('div'),{className:'lbl',innerHTML:'<small style="color:#7fd1ff">water level today</small>'}));wl.position.set(-3,2+lvl*3.2,3);lg.add(wl);ladLbl.push(wl);
+// flow particles pump -> buckets, rate set by rung vs water level
+const fl=new THREE.Group();scene.add(fl);const P=[];
+B.forEach(b=>{const n=b.rung<=lvl?14:3;for(let i=0;i<n;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.35,6,4),new THREE.MeshBasicMaterial({color:b.col}));m.userData={t:Math.random(),b,s:.0025+Math.random()*.002};fl.add(m);P.push(m)}});
+// view
+function resize(){const w=host.clientWidth,h=host.clientHeight;cam.aspect=w/h;cam.updateProjectionMatrix();ren.setSize(w,h);lr.setSize(w,h)}addEventListener('resize',resize);resize();
+const home=[new THREE.Vector3(0,80,150).multiplyScalar(host.clientWidth<host.clientHeight*1.1?1.35:1),new THREE.Vector3(0,host.clientWidth<600?-2:12,-10)];function fly(pos,tgt){const p0=cam.position.clone(),t0=ctl.target.clone();let k=0;(function f(){k=Math.min(1,k+.04);const e=k*k*(3-2*k);cam.position.lerpVectors(p0,pos,e);ctl.target.lerpVectors(t0,tgt,e);if(k<1)requestAnimationFrame(f)})()}
+cam.position.copy(home[0]);window.flyLadder=()=>{const c=lg.localToWorld(new THREE.Vector3(25,12,0));fly(c.clone().add(new THREE.Vector3(0,18,62)),c)};ctl.target.copy(home[1]);
+const ray=new THREE.Raycaster(),mv=new THREE.Vector2();let down;ren.domElement.addEventListener('pointerdown',e=>down=[e.clientX,e.clientY]);
+ren.domElement.addEventListener('pointerup',e=>{if(!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>6)return;const r=ren.domElement.getBoundingClientRect();mv.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mv,cam);const h=ray.intersectObjects(pick.filter(o=>o.visible&&(!o.parent||o.parent.visible)),false)[0];if(h)select(h.object.userData.id)});
+let clock=0;(function loop(){requestAnimationFrame(loop);clock+=.016;ctl.update();pump.rotation.y+=.01;pump.scale.setScalar(1+.06*Math.sin(clock*3));
+ fxp.children.forEach(m=>{m.userData.a+=.012;m.position.set(Math.cos(m.userData.a)*fxr,-6,Math.sin(m.userData.a)*fxr)});
+ P.forEach(m=>{const u=m.userData;u.t+=u.s;if(u.t>1)u.t=0;const a=pump.position,b=u.b.pos;m.position.set(a.x+(b.x-a.x)*u.t,a.y+(b.y-a.y)*u.t+Math.sin(u.t*Math.PI)*8,a.z+(b.z-a.z)*u.t)});
+ dw.rotation.y+=.002;if(clock%0.2<0.017){const lc=lg.localToWorld(new THREE.Vector3(25,12,0)),near=cam.position.distanceTo(lc)<120;ladLbl.forEach(l=>l.visible=near)}ren.render(scene,cam);lr.render(scene,cam)})();
+const tog=(id,g,extra)=>$(id).onclick=e=>{g.visible=!g.visible;e.target.classList.toggle('on',g.visible);(extra||[]).forEach(o=>o.visible=g.visible)};
+tog('#bOwn',og,ownLbl);if(host.clientWidth<600){og.visible=false;ownLbl.forEach(o=>o.visible=false);$('#bOwn').classList.remove('on')}tog('#bFlow',fl);tog('#bDer',dg,[dlb]);$('#bSpin').onclick=e=>{ctl.autoRotate=!ctl.autoRotate;e.target.classList.toggle('on',ctl.autoRotate)};$('#bReset').onclick=()=>fly(...home);
+// ---------- panels ----------
+const rows=pts=>'<table>'+pts.map(p=>`<tr><td>${p[0]}${E(p[4])}<br>${sl(p[2])}${p[3]?' <span class="src">· '+p[3]+'</span>':''}</td><td class="n">${p[1]}</td></tr>`).join('')+'</table>';
+function focus(p,d){const dir=cam.position.clone().sub(ctl.target).normalize();fly(p.clone().add(dir.multiplyScalar(d)),p.clone())}
+function select(id){const b=B.find(x=>x.id===id),o=O.find(x=>x.id===id);
+ if(b){focus(b.pos,R(b.ghost||b.v)*4+14);side.innerHTML=`<h3>Asset bucket</h3><h2 style="margin:0;color:${b.col}">${b.n} · ${fmt(b.v)}${E(b.est)}</h2><div class="src">${sl(b.src)} · ${b.asof}</div><p>${b.one}</p>${rows(b.pts)}<div class="card">${b.note}</div><p class="src">Owned mainly by: ${O.filter(x=>x.links.includes(b.id)).map(x=>`<a href="#" onclick="return sel('${x.id}')">${x.n}</a>`).join(', ')}</p>`;return}
+ if(o){focus(o.pos,R(o.v)*4+14);side.innerHTML=`<h3>Owner / holder</h3><h2 style="margin:0">${o.n} · ${fmt(o.v)}${E(o.est)}</h2><div class="src">${sl(o.src)} · ${o.asof}</div><p>${o.one}</p>${rows(o.pts)}<p class="src">Main holdings (qualitative, lines not to scale): ${o.links.map(t=>{const x=B.find(b=>b.id===t);return x?`<a href="#" onclick="return sel('${t}')">${x.n}</a>`:t==='fx'?'FX':'Derivatives'}).join(', ')}</p>`;return}
+ if(id==='deriv'){focus(dp,40);side.innerHTML=`<h3>Shadow layer</h3><h2 style="margin:0;color:#b07dff">Derivatives</h2><p>${A.deriv.one}</p>${rows(A.deriv.pts)}<div class="card"><b>Notional vs real value, in one line:</b> a $10M interest-rate swap has $10M notional, but only the difference in interest payments ever changes hands, so its market value might be $200k. That is why $845T of notional is really about $22.8T of value, and after netting even less. Never add notional to the other buckets.</div>`;return}
+ if(id==='fx'){fly(new THREE.Vector3(fxr+30,25,40),new THREE.Vector3(fxr,-6,0));side.innerHTML=`<h3>Flow, not a stock</h3><h2 style="margin:0;color:#2ec4b6">FX river · $9.51T/day</h2><p>${A.fx.one}</p>${rows(A.fx.pts)}<div class="card">Most of it is short FX swaps (banks and funds rolling dollar funding), not people betting on currencies. A torus, not a ball, because a daily flow cannot be compared to a stock of wealth.</div>`;return}
+ if(id==='engine'){tab('engine');focus(pump.position,40);return}
+ if(id==='ladder'){tab('now');flyLadder();return}}
+window.sel=id=>{tab('map',true);select(id);return false};
+const T={};
+T.map=()=>`<h3>The core model in one picture</h3><div class="card step"><b>Pump → Reservoirs → Ladder.</b><br>1. <b>The pump</b> (central banks + bank and shadow credit) sets how much money exists and what cash pays.<br>2. <b>The reservoirs</b> (the buckets) mostly just hold it. Real estate is the biggest by far, but it does not overflow into stocks.<br>3. <b>The ladder</b>: when cash pays less than the risk ahead, money climbs cash → bonds → stocks → small caps → BTC → alts → memes. When cash pays more, it climbs back down, top rung first.</div>
+<h3>Biggest numbers on the map</h3><table>${[...B].sort((a,b)=>b.v-a.v).map(b=>`<tr style="cursor:pointer" onclick="sel('${b.id}')"><td><span style="color:${b.col}">●</span> ${b.n}${E(b.est)}<br><span class="src">${S[b.src][0]}</span></td><td class="n">${fmt(b.v)}</td></tr>`).join('')}<tr onclick="sel('deriv')" style="cursor:pointer"><td>Derivatives: notional / real value<br><span class="src">${S.bisotc[0]}</span></td><td class="n">$845T / $22.8T</td></tr><tr onclick="sel('fx')" style="cursor:pointer"><td>FX (per day, a flow)<br><span class="src">${S.bisfx[0]}</span></td><td class="n">$9.51T/day</td></tr></table>
+<p class="src">Buckets overlap (deposits fund loans; private funds hold real estate and credit) so do not add them up. Tap a ball or row to drill in.</p>`;
+T.owners=()=>`<h3>Who owns the money</h3><table>${O.map(o=>`<tr style="cursor:pointer" onclick="sel('${o.id}')"><td>${o.n}${E(o.est)}<br><span class="src">${S[o.src][0]} · ${o.asof}</span></td><td class="n">${fmt(o.v)}</td></tr>`).join('')}</table>
+<div class="card"><b>The one chart to teach: who owns which bucket (US, Fed DFA Q2 2026)</b><table><tr><td></td><td class="n">Stocks</td><td class="n">Real estate</td><td class="n">Net worth</td></tr><tr><td>Top 1%</td><td class="n">50.9%</td><td class="n">13.4%</td><td class="n">32.5%</td></tr><tr><td>Next 9%</td><td class="n">37.2%</td><td class="n">30.3%</td><td class="n">36.4%</td></tr><tr><td>50th–90th</td><td class="n">11.4%</td><td class="n">46.6%<span class="est">DERIVED</span></td><td class="n">28.8%</td></tr><tr><td>Bottom 50%</td><td class="n">0.6%</td><td class="n">9.7%</td><td class="n">2.3%</td></tr></table><span class="src">${sl('dfa')}. Real estate 50th–90th = 100 minus the other three.</span><br><br>Stocks are the rich’s bucket; homes are the middle class’s bucket. So when the pump lifts stocks, the top 10% get ~88% of the gain directly.</div>
+<div class="card"><b>Owners vs managers.</b> Households are the ultimate owners. Banks, funds, pensions and insurers hold most money on their behalf, so these balls overlap. BlackRock ($15.49T) and Vanguard ($13.3T) are pipes, not owners.</div>`;
+T.bots=()=>`<h3>Who actually pushes the buttons</h3>${A.bots.map(b=>`<div class="card"><b>${b[0]}</b>${E(b[4])}<div style="display:flex;gap:8px;align-items:center;margin:6px 0"><div class="bar" style="width:${b[1]}%"></div><b>${b[2]}</b></div>${sl(b[3])}</div>`).join('')}
+<div class="card"><b>What it means:</b> bots decide the next tick, the spread and the stop-hunts. They do not decide the tide; they mostly execute decisions made by owners and react to the engine. That is why your edge is reading the engine and the ladder, not out-clicking bots. Bot share of crypto and US stocks has no official source; those bars are estimates.</div>`;
+const V={STRONG:'#1d8a4a',PARTIAL:'#b07d10',WEAK:'#a33'};
+const MET=[['Cascade / overflow','PARTIAL','Real estate is the biggest bucket ($393T), but the evidence shows it spills into spending, not into stocks. Mian & Sufi found US homeowners pulled out 25 to 30 cents per $1 of home-equity gain in 2002 to 2006; it was not used to buy more real estate or pay down cards, and the authors conclude it went to real outlays (consumption, home improvement). Housing wealth also moves consumer spending more than stock wealth does (Case, Quigley & Shiller). So: overflow into the real economy, yes. A direct pipe from home equity into the stock market is not supported by this evidence.',['mian','cqs']],
+['Trickle-down','WEAK','As an economic policy, a 50-year, 18-country study found major tax cuts for the rich raised top income shares with no significant effect on growth or jobs (Hope & Limberg 2022). In markets it runs the other way: the top 1% own 50.9% of US stocks, so gains concentrate at the top and trickle down slowly via spending.',['hl','dfa']],
+['Engine (central banks + credit)','STRONG','QE worked by buying bonds and pushing investors out the risk curve (the \u201cportfolio balance\u201d channel): Fed purchases cut 10-yr term premia ~30–100bp (Gagnon et al. 2011). Bitcoin moved with global M2 in 83% of 12-month windows 2013–24 (Alden). Global debt keeps growing (+$10T in H1 2026). The engine sets the tide.',['gagnon','alden','iif']],
+['Liquidity tide / risk ladder','STRONG (as synthesis)','Combine the engine with the price of cash: the risk-free rate is the height of the bottom rung. Money climbs when policy eases and liquidity grows, and leaves the top rungs first when it tightens. BTC dominance rising = money retreating down the crypto ladder. Short-horizon correlations are loose (Alden: 6-month correlation only 0.36), so use it for direction, not timing.',['alden','bisgli']]];
+T.engine=()=>`<h3>Which metaphor is right? Evidence, not vibes</h3>${MET.map(m=>`<div class="card"><b>${m[0]}</b> <span class="verdict" style="background:${V[m[1].split(' ')[0]]}">${m[1]}</span><p style="margin:6px 0">${m[2]}</p>${m[3].map(sl).join('<br>')}</div>`).join('')}
+<div class="card" style="border-color:var(--gold)"><b>Winner: Pump → Reservoirs → Ladder.</b> The engine is real and measurable; the buckets are mostly passive reservoirs; the ladder tells you which reservoirs fill first and drain first.</div>
+<h3>Engine gauges today</h3><table>${A.engine.map(g=>`<tr><td><b>${g[0]}</b><br><span class="src">${g[3]} · ${sl(g[5])}</span><br><span class="${g[6]>0?'up':g[6]<0?'dn':'flat'}">${g[4]}</span></td><td class="n">${g[1]}<br><span class="src">${g[2]}</span></td></tr>`).join('')}</table>`;
+T.now=()=>`<h3>Today’s read (Oct 30 2026)</h3><div class="card step" style="border-color:var(--gold)"><b>The water is at large-cap stocks and is draining off the top rungs.</b> The pump is idling: the Fed balance sheet is flat at $6.75T, the reverse repo cushion is empty ($0.35B), and the Treasury account is up to $1.0T, which pulls cash out. Cash still pays ~3.9% and the 10-year 5.05%, so there is little push to climb. Money is sitting in money funds ($7.90T), short Treasuries and the big US stocks (S&P 7,744). In crypto, BTC dominance at 59.2%, Fear & Greed at 30 and flat stablecoin supply all say money is retreating from alts into BTC or out. Alt season needs the reverse: dominance under your 57% line, stablecoin supply growing, and the pump turning on (Fed balance sheet growing, TGA spending down, yields falling).</div>
+<table>${A.now.map(n=>`<tr><td><b>${n[0]}</b><br><span class="src">${n[3]}</span><br>${sl(n[4])} <span class="src">· ${n[2]}</span></td><td class="n">${n[1]}</td></tr>`).join('')}</table>
+<p class="src">The water-level marker on the 3D ladder is my judgement from these readings, not a published index.</p>`;
+const STEPS=[['Start with the size of things','Everything on this map is a ball sized by real dollars. The biggest one is not stocks. It is real estate: $393 trillion, more than stocks, bonds and gold combined. Crypto, all of it, is $2.6 trillion: a marble next to a house.',()=>fly(...home)],
+['Buckets are reservoirs, not waterfalls','People think a housing boom spills into stocks. The data says no: when homeowners pull equity out, they spend it. Each bucket mostly holds its own water.',()=>select('re')],
+['Find the pump','The water comes from one place: central banks setting the price of money, and banks plus shadow lenders creating credit. Global debt is $365 trillion and growing. When the pump runs, every bucket rises.',()=>focus(pump.position,40)],
+['Climb the ladder','Money climbs a risk ladder: cash, bonds, big stocks, small stocks, Bitcoin, altcoins, memecoins. It climbs when cash pays little. It falls back down, top rung first, when cash pays more.',()=>flyLadder()],
+['See who owns each bucket','In the US the top 1% own 51% of stocks but only 13% of real estate. Stocks are the rich’s bucket; homes are the middle class’s. That is why pumped markets widen the wealth gap.',()=>select('hh')],
+['Meet the bots','Bots do most of the clicking: about 60 to 80% of futures volume and most stock trading. But bots execute; they do not set the tide. Read the pump, not the ticks.',()=>fly(...home)],
+['Ignore the scary number','Derivatives have $845 trillion of notional value, but they are only worth $22.8 trillion. Notional is the size of the bet, not money on the table.',()=>select('deriv')],
+['Read today','Right now the pump is idling, cash pays almost 4%, and money is sitting at big US stocks and Bitcoin while it leaves smaller coins. Watch three switches: Fed balance sheet, stablecoin supply, Bitcoin dominance.',()=>{flyLadder()}]];
+let si=0;function teach(){const s=STEPS[si];s[2]();document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t==='teach'));
+ side.innerHTML=`<h3>Teach it · step ${si+1} of ${STEPS.length}</h3><h2 style="margin:4px 0">${s[0]}</h2><p class="step">${s[1]}</p><div class="navb"><button id="tp">◀ Back</button><button id="tn">${si<STEPS.length-1?'Next ▶':'Start over'}</button></div><p class="src">Every number in these steps is sourced on the other tabs.</p>`;
+ $('#tp').onclick=()=>{si=Math.max(0,si-1);teach()};$('#tn').onclick=()=>{si=(si+1)%STEPS.length;teach()}}
+T.teach=()=>{setTimeout(teach,0);return ''};
+T.sources=()=>`<h3>Data gaps (stated, not guessed)</h3><div class="card"><ul style="padding-left:18px;margin:0"><li>Real estate is the start-2025 Savills figure; no 2026 total exists yet.</li><li>Global stocks and bonds are end-2025; US stocks are +13% since, global not recomputed.</li><li>Cash/M2 covers only 4 economies and comes from an aggregator, not an official global series.</li><li>Commodities ex-gold have no clean stock value; only $2.8T commodity derivatives notional (BIS).</li><li>Insurers are not split from pensions (FSB combined, derived $83.6T).</li><li>Family offices ($3.1T, 2024) and private credit ($2T–$4T by definition) are estimates.</li><li>Bot shares for US stocks and crypto are industry estimates; no regulator publishes one number. Crypto figure is from a secondary report.</li><li>Owner→bucket lines are qualitative (main holdings), not sized flows.</li></ul></div><h3>All sources</h3>${Object.keys(S).map(k=>`<div style="margin:4px 0">${sl(k)}</div>`).join('')}`;
+function tab(t,quiet){document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));if(!quiet||t!=='map')side.innerHTML=T[t]()}
+document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.t));tab('map');
+</script></body></html>
